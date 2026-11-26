@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Game Buzzer</title>
+<meta name="description" content="A simple multiplayer game-show buzzer. No accounts, no installs.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23e5484d'/></svg>">
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
+    --accent: #e5484d; --accent-dark: #b8282d; --ok: #2f9e66; --warn: #c98a12; --locked: #9a9aa0;
+    --gold: #d4a017;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
+      --accent: #ff5a5f; --accent-dark: #c2363b; --ok: #3fbf80; --warn: #e5a83b; --locked: #55555c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
+    --accent: #ff5a5f; --accent-dark: #c2363b; --ok: #3fbf80; --warn: #e5a83b; --locked: #55555c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .stack > * + * { margin-top: 16px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  input, select {
+    width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  }
+  input.code { text-transform: uppercase; letter-spacing: .3em; font-weight: 700; font-size: 22px; text-align: center; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer;
+    background: var(--text); color: var(--bg);
+  }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+  button.big { width: 100%; padding: 16px; font-size: 18px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row > .grow { flex: 1; }
+  .hidden { display: none !important; }
+  .err { color: var(--accent); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .home-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 680px) { .home-grid { grid-template-columns: 1fr; } }
+
+  /* ---------- Player ---------- */
+  #player-game { display: flex; flex-direction: column; align-items: center; min-height: calc(100dvh - 48px); }
+  .player-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+  .dot.on { background: var(--ok); }
+  .buzzer-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; width: 100%; }
+  #buzzer {
+    width: min(78vw, 60vh, 380px); aspect-ratio: 1; border-radius: 50%; padding: 0;
+    background: radial-gradient(circle at 35% 30%, #ff8a8d, var(--accent) 45%, var(--accent-dark));
+    color: #fff; font-size: clamp(28px, 8vw, 48px); font-weight: 800; letter-spacing: .08em;
+    box-shadow: 0 14px 0 #7a1a1d, 0 24px 40px rgba(0,0,0,.35);
+    transition: transform .06s, box-shadow .06s, filter .2s;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  #buzzer:active:not(:disabled), #buzzer.pressed { transform: translateY(10px); box-shadow: 0 4px 0 #7a1a1d, 0 10px 20px rgba(0,0,0,.35); }
+  #buzzer:disabled { opacity: 1; filter: grayscale(1) brightness(.85); cursor: default; }
+  #buzzer.mine { filter: none; background: radial-gradient(circle at 35% 30%, #ffe48a, var(--gold) 50%, #8a6a08); box-shadow: 0 4px 0 #5e4805, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
+  #status { font-size: 22px; font-weight: 700; text-align: center; min-height: 1.4em; }
+  #status-sub { color: var(--muted); text-align: center; margin-top: -18px; min-height: 1.4em; }
+
+  /* ---------- Host ---------- */
+  .host-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .room-code { font-size: 56px; font-weight: 800; letter-spacing: .15em; line-height: 1; }
+  .join-box { display: flex; gap: 16px; align-items: center; }
+  #qr { background: #fff; padding: 8px; border-radius: 10px; line-height: 0; }
+  #qr img, #qr svg { width: 120px; height: 120px; }
+  .host-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .host-grid { grid-template-columns: 1fr; } .room-code { font-size: 44px; } }
+  ol.order { list-style: none; margin: 0; padding: 0; }
+  ol.order li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  ol.order li + li { margin-top: 8px; }
+  ol.order li .pos { font-weight: 800; font-size: 20px; width: 44px; text-align: center; }
+  ol.order li .name { flex: 1; font-weight: 700; font-size: 20px; overflow-wrap: anywhere; }
+  ol.order li .delta { color: var(--muted); font-variant-numeric: tabular-nums; }
+  ol.order li.first { background: color-mix(in srgb, var(--gold) 22%, var(--panel)); border-color: var(--gold); }
+  ol.order li.first .name { font-size: 28px; }
+  ul.players { list-style: none; margin: 0; padding: 0; }
+  ul.players li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.players li:last-child { border-bottom: 0; }
+  ul.players li .name { flex: 1; overflow-wrap: anywhere; }
+  ul.players li.offline .name { color: var(--muted); }
+  .x { background: transparent; color: var(--muted); padding: 2px 8px; border: 0; font-size: 18px; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  .host-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .host-actions button { flex: 1; min-width: 140px; }
+  #reset-btn { background: var(--accent); color: #fff; font-size: 18px; padding: 16px; }
+  .flash { animation: flash .5s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 6px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
+</style>
+</head>
+<body>
+
+<!-- ============ HOME ============ -->
+<section id="view-home" class="wrap hidden">
+  <h1>🔴 Game Buzzer</h1>
+  <p class="sub">The host puts this on a big screen. Players join on their phones. No accounts, no installs.</p>
+  <div class="home-grid">
+    <div class="card stack">
+      <h2>I'm a player</h2>
+      <div><label for="home-code">Room code</label><input id="home-code" class="code" maxlength="4" autocomplete="off" placeholder="ABCD"></div>
+      <button id="home-join" class="big">Join game</button>
+    </div>
+    <div class="card stack">
+      <h2>I'm the host</h2>
+      <p class="muted" style="margin:0">Start a room on this device. Keep this tab open: it runs the game.</p>
+      <button id="home-host" class="big secondary">Host a game</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAYER: JOIN ============ -->
+<section id="view-join" class="wrap hidden" style="max-width:480px">
+  <h1>Join game <span id="join-code-label" class="muted"></span></h1>
+  <p class="sub">Enter your name and choose your buzzer sound.</p>
+  <form id="join-form" class="card stack">
+    <div id="join-code-wrap"><label for="join-code">Room code</label><input id="join-code" class="code" maxlength="4" autocomplete="off" placeholder="ABCD"></div>
+    <div><label for="join-name">Your name</label><input id="join-name" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam" required></div>
+    <div>
+      <label for="join-sound">Your buzzer sound</label>
+      <div class="row"><select id="join-sound" class="grow"></select><button type="button" id="preview-sound" class="secondary">▶ Play</button></div>
+    </div>
+    <div id="join-error" class="err hidden"></div>
+    <button id="join-submit" class="big" type="submit">Let's play</button>
+  </form>
+</section>
+
+<!-- ============ PLAYER: GAME ============ -->
+<section id="view-player" class="wrap hidden">
+  <div id="player-game">
+    <div class="player-top">
+      <span class="pill"><span id="conn-dot" class="dot"></span><span id="conn-text">Connecting…</span></span>
+      <span class="pill"><strong id="me-name"></strong>&nbsp;· room <span id="me-room"></span></span>
+    </div>
+    <div class="buzzer-area">
+      <button id="buzzer" disabled>BUZZ</button>
+      <div id="status">Connecting…</div>
+      <div id="status-sub"></div>
+    </div>
+    <button id="leave-btn" class="secondary">Leave game</button>
+  </div>
+</section>
+
+<!-- ============ HOST ============ -->
+<section id="view-host" class="wrap hidden">
+  <div class="host-head">
+    <div>
+      <h2>Room code</h2>
+      <div id="room-code" class="room-code">····</div>
+      <div class="muted" style="margin-top:8px"><span id="host-conn">Starting…</span></div>
+    </div>
+    <div class="join-box">
+      <div>
+        <h2>Players join at</h2>
+        <div id="join-url" style="font-weight:600; overflow-wrap:anywhere; max-width:300px"></div>
+        <button id="copy-link" class="secondary" style="margin-top:8px; padding:8px 12px">Copy link</button>
+      </div>
+      <div id="qr"></div>
+    </div>
+  </div>
+  <div class="host-grid">
+    <div class="card">
+      <h2>Buzz order</h2>
+      <ol id="order" class="order"></ol>
+      <div id="order-empty" class="empty">Waiting for someone to buzz…</div>
+      <div class="host-actions">
+        <button id="reset-btn">Reset buzzers (space)</button>
+        <button id="lock-btn" class="secondary">Lock buzzers</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Players (<span id="player-count">0</span>)</h2>
+      <ul id="players" class="players"></ul>
+      <div id="players-empty" class="empty">No one has joined yet.</div>
+      <div class="host-actions">
+        <label class="row" style="font-weight:500; margin:0"><input type="checkbox" id="host-sound" checked style="width:auto"> Play sounds here</label>
+      </div>
+      <div class="host-actions">
+        <button id="new-room" class="secondary">New room</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  // ---------------------------------------------------------------- config
+  const ID_PREFIX = 'gamebuzzer-v1-';            // namespaces our room ids on the public PeerJS server
+  const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ';  // no I, L, O (easy to misread)
+  const params = new URLSearchParams(location.search);
+
+  // Optional self-hosted PeerJS server: ?peerhost=host&peerport=9000&peerpath=/&peersecure=0
+  function peerOptions() {
+    const o = { debug: 1 };
+    if (params.get('peerhost')) {
+      o.host = params.get('peerhost');
+      o.port = Number(params.get('peerport') || 443);
+      o.path = params.get('peerpath') || '/';
+      o.secure = params.get('peersecure') !== '0';
+    }
+    return o;
+  }
+  // Keep the peer-server params when building links.
+  function extraParams() {
+    const keep = new URLSearchParams();
+    for (const k of ['peerhost', 'peerport', 'peerpath', 'peersecure']) if (params.get(k)) keep.set(k, params.get(k));
+    return keep;
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  const randomCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+  const cleanCode = (s) => (s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  const show = (id) => { for (const v of document.querySelectorAll('section[id^="view-"]')) v.classList.toggle('hidden', v.id !== id); };
+
+  // ---------------------------------------------------------------- sounds
+  // Each sound is synthesised with Web Audio, so there are no audio files to host.
+  let ctx = null;
+  function audio() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, start, dur, type = 'square', vol = 0.25, endFreq = null) {
+    const a = audio(), t = a.currentTime + start;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+  const SOUNDS = [
+    { id: 'buzz',    name: 'Classic buzzer', play: () => { tone(110, 0, .6, 'sawtooth', .3); tone(116, 0, .6, 'square', .15); } },
+    { id: 'ding',    name: 'Ding ding',      play: () => { tone(1320, 0, .5, 'sine', .4); tone(1320, .25, .7, 'sine', .4); } },
+    { id: 'chime',   name: 'Doorbell',       play: () => { tone(659, 0, .6, 'triangle', .4); tone(523, .3, .9, 'triangle', .4); } },
+    { id: 'laser',   name: 'Laser',          play: () => tone(1800, 0, .45, 'sawtooth', .25, 120) },
+    { id: 'boing',   name: 'Boing',          play: () => tone(150, 0, .5, 'sine', .5, 600) },
+    { id: 'arcade',  name: 'Arcade coin',    play: () => { tone(988, 0, .08, 'square', .2); tone(1319, .08, .4, 'square', .2); } },
+    { id: 'fanfare', name: 'Fanfare',        play: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .1, i === 3 ? .5 : .12, 'square', .2)); } },
+    { id: 'honk',    name: 'Honk',           play: () => { tone(330, 0, .18, 'sawtooth', .3); tone(330, .24, .3, 'sawtooth', .3); } },
+    { id: 'alarm',   name: 'Alarm',          play: () => { for (let i = 0; i < 4; i++) tone(i % 2 ? 660 : 880, i * .12, .12, 'square', .2); } },
+    { id: 'bubble',  name: 'Bubble pop',     play: () => { tone(400, 0, .1, 'sine', .4, 1200); tone(500, .12, .1, 'sine', .4, 1500); tone(600, .24, .12, 'sine', .4, 1800); } },
+    { id: 'robot',   name: 'Robot',          play: () => { [300, 200, 400, 250].forEach((f, i) => tone(f, i * .09, .09, 'square', .2)); } },
+    { id: 'whistle', name: 'Slide whistle',  play: () => tone(500, 0, .6, 'sine', .35, 2000) },
+  ];
+  const soundById = (id) => SOUNDS.find((s) => s.id === id) || SOUNDS[0];
+  function playSound(id) { try { soundById(id).play(); } catch (e) { console.warn(e); } }
+
+  // ================================================================= HOME
+  function startHome() {
+    show('view-home');
+    const go = () => {
+      const code = cleanCode($('home-code').value);
+      if (code.length !== 4) { $('home-code').focus(); return; }
+      location.search = '?' + new URLSearchParams([...extraParams(), ['room', code]]).toString();
+    };
+    $('home-join').onclick = go;
+    $('home-code').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+    $('home-host').onclick = () => { location.search = '?' + new URLSearchParams([...extraParams(), ['host', '1']]).toString(); };
+  }
+
+  // ================================================================= PLAYER
+  function startPlayer(code) {
+    const saved = store.get('buzzer-player') || {};
+    const clientId = saved.clientId || uid();
+
+    show('view-join');
+    if (code) { $('join-code').value = code; $('join-code-wrap').classList.add('hidden'); $('join-code-label').textContent = code; }
+    $('join-name').value = saved.name || '';
+    for (const s of SOUNDS) $('join-sound').add(new Option(s.name, s.id));
+    $('join-sound').value = saved.sound || SOUNDS[Math.floor(Math.random() * SOUNDS.length)].id;
+    $('join-sound').onchange = () => playSound($('join-sound').value);
+    $('preview-sound').onclick = () => playSound($('join-sound').value);
+
+    $('join-form').onsubmit = (e) => {
+      e.preventDefault();
+      const room = cleanCode($('join-code').value);
+      const name = $('join-name').value.trim().slice(0, 24);
+      if (room.length !== 4) return joinError('Enter the 4-letter room code.');
+      if (!name) return joinError('Enter your name.');
+      audio(); // unlock audio on this user gesture
+      const me = { clientId, name, sound: $('join-sound').value };
+      store.set('buzzer-player', me);
+      const u = new URL(location.href); u.searchParams.set('room', room); history.replaceState(null, '', u);
+      runPlayer(room, me);
+    };
+    if (saved.name && code && params.get('auto') === '1') $('join-form').requestSubmit();
+  }
+  function joinError(msg) { $('join-error').textContent = msg; $('join-error').classList.remove('hidden'); }
+
+  function runPlayer(room, me) {
+    show('view-player');
+    $('me-name').textContent = me.name;
+    $('me-room').textContent = room;
+
+    let peer = null, conn = null, retry = null, joined = false, left = false;
+    let state = { armed: false, order: [] };
+
+    const setConn = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
+    function render() {
+      const btn = $('buzzer');
+      const pos = state.order.findIndex((o) => o.id === me.clientId);
+      btn.classList.toggle('mine', pos >= 0);
+      if (!joined) {
+        btn.disabled = true; $('status').textContent = 'Connecting…'; $('status-sub').textContent = '';
+      } else if (pos >= 0) {
+        btn.disabled = true;
+        $('status').textContent = pos === 0 ? 'You buzzed first! 🎉' : `You buzzed #${pos + 1}`;
+        $('status-sub').textContent = pos === 0 ? '' : `${state.order[0].name} was first`;
+      } else if (!state.armed) {
+        btn.disabled = true; $('status').textContent = 'Buzzers locked';
+        $('status-sub').textContent = state.order.length ? `${state.order[0].name} buzzed first` : 'Wait for the host';
+      } else {
+        btn.disabled = false; $('status').textContent = 'Ready!';
+        $('status-sub').textContent = state.order.length ? `${state.order[0].name} buzzed first. You can still buzz in.` : 'Tap the buzzer to buzz in';
+      }
+    }
+
+    function buzz(e) {
+      if (e) e.preventDefault();
+      const btn = $('buzzer');
+      if (btn.disabled || !conn || !conn.open) return;
+      playSound(me.sound);
+      if (navigator.vibrate) navigator.vibrate(80);
+      btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120);
+      // Optimistically show as buzzed; host's state update will confirm the position.
+      state = { ...state, order: [...state.order, { id: me.clientId, name: me.name }] };
+      render();
+      conn.send({ t: 'buzz' });
+    }
+    // pointerdown is faster than click on touch screens
+    $('buzzer').addEventListener('pointerdown', buzz);
+    document.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter') && !$('view-player').classList.contains('hidden')) buzz(e); });
+
+    function scheduleRetry(msg) {
+      if (left) return;
+      joined = false; render();
+      setConn(false, msg || 'Reconnecting…');
+      clearTimeout(retry); retry = setTimeout(connect, 2000);
+    }
+
+    function connect() {
+      if (left) return;
+      if (!peer || peer.destroyed) {
+        peer = new Peer(peerOptions());
+        peer.on('open', () => openConn());
+        peer.on('error', (err) => {
+          console.warn('peer error', err.type, err);
+          if (err.type === 'peer-unavailable') scheduleRetry(`Room ${room} not found. Is the host's screen open? Retrying…`);
+          else { try { peer.destroy(); } catch {} scheduleRetry('Connection problem. Retrying…'); }
+        });
+        peer.on('disconnected', () => { if (!left && !peer.destroyed) { try { peer.reconnect(); } catch {} } });
+      } else if (peer.open) {
+        openConn();
+      } else {
+        try { peer.reconnect(); } catch { peer.destroy(); peer = null; connect(); }
+      }
+    }
+    function openConn() {
+      if (conn) { try { conn.close(); } catch {} }
+      setConn(false, 'Joining room…');
+      conn = peer.connect(ID_PREFIX + room, { reliable: true, metadata: { clientId: me.clientId } });
+      const c = conn;
+      c.on('open', () => c.send({ t: 'join', id: me.clientId, name: me.name, sound: me.sound }));
+      c.on('data', (msg) => {
+        if (c !== conn || !msg) return;
+        if (msg.t === 'state') {
+          joined = true; setConn(true, 'Connected');
+          state = { armed: msg.armed, order: msg.order || [] };
+          render();
+        } else if (msg.t === 'kicked') {
+          left = true; setConn(false, 'Removed by host');
+          $('status').textContent = 'The host removed you from the game.'; $('status-sub').textContent = '';
+          $('buzzer').disabled = true;
+          try { peer.destroy(); } catch {}
+        }
+      });
+      c.on('close', () => { if (c === conn) scheduleRetry('Lost connection. Reconnecting…'); });
+      c.on('error', () => { if (c === conn) scheduleRetry('Lost connection. Reconnecting…'); });
+    }
+
+    // Phones drop connections when the screen sleeps; reconnect when they come back.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !left && (!conn || !conn.open)) { clearTimeout(retry); connect(); }
+    });
+    $('leave-btn').onclick = () => {
+      left = true; try { conn && conn.send({ t: 'leave' }); } catch {}
+      setTimeout(() => { try { peer && peer.destroy(); } catch {} location.href = location.pathname + (extraParams().toString() ? '?' + extraParams() : ''); }, 150);
+    };
+
+    render(); connect();
+  }
+
+  // ================================================================= HOST
+  function startHost() {
+    show('view-host');
+    // Host state survives a page refresh (same room code, same players).
+    let hs = store.get('buzzer-host') || {};
+    if (!hs.code) hs = { code: randomCode(), players: {}, order: [], armed: true };
+    hs.players = hs.players || {}; hs.order = hs.order || [];
+    const conns = new Map(); // clientId -> DataConnection
+    let peer = null, firstAt = null, codeAttempts = 0;
+    const save = () => store.set('buzzer-host', { code: hs.code, players: hs.players, order: hs.order, armed: hs.armed });
+
+    // The browser blocks sound until the host interacts with the page once.
+    let audioReady = false;
+    const unlock = () => { if (!audioReady) { audio(); audioReady = true; } };
+    document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+
+    function joinUrl() {
+      const u = new URL(location.pathname, location.origin);
+      for (const [k, v] of extraParams()) u.searchParams.set(k, v);
+      u.searchParams.set('room', hs.code);
+      return u.toString();
+    }
+    function renderHead() {
+      $('room-code').textContent = hs.code;
+      const url = joinUrl();
+      $('join-url').textContent = url.replace(/^https?:\/\//, '');
+      $('qr').innerHTML = '';
+      if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+      else $('qr').classList.add('hidden');
+      document.title = `Buzzer · ${hs.code}`;
+    }
+    function renderOrder() {
+      const ol = $('order'); ol.innerHTML = '';
+      const ords = ['1st', '2nd', '3rd'];
+      hs.order.forEach((o, i) => {
+        const li = document.createElement('li'); if (i === 0) li.className = 'first';
+        const delta = i === 0 ? '' : `+${((o.at - hs.order[0].at) / 1000).toFixed(2)}s`;
+        li.innerHTML = `<span class="pos"></span><span class="name"></span><span class="delta"></span>`;
+        li.querySelector('.pos').textContent = ords[i] || `${i + 1}th`;
+        li.querySelector('.name').textContent = (hs.players[o.id] && hs.players[o.id].name) || o.name;
+        li.querySelector('.delta').textContent = delta;
+        ol.appendChild(li);
+      });
+      $('order-empty').classList.toggle('hidden', hs.order.length > 0);
+      $('order-empty').textContent = hs.armed ? 'Waiting for someone to buzz…' : 'Buzzers are locked.';
+      $('lock-btn').textContent = hs.armed ? 'Lock buzzers' : 'Unlock buzzers';
+    }
+    function renderPlayers() {
+      const ul = $('players'); ul.innerHTML = '';
+      const list = Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
+      for (const p of list) {
+        const online = conns.has(p.id) && conns.get(p.id).open;
+        const li = document.createElement('li'); if (!online) li.className = 'offline';
+        li.innerHTML = `<span class="dot"></span><span class="name"></span><button class="secondary" style="padding:4px 10px" title="Play their sound">🔊</button><button class="x" title="Remove player">×</button>`;
+        li.querySelector('.dot').classList.toggle('on', online);
+        li.querySelector('.name').textContent = p.name + (online ? '' : ' (offline)');
+        li.querySelector('.secondary').onclick = () => playSound(p.sound);
+        li.querySelector('.x').onclick = () => kick(p.id);
+        ul.appendChild(li);
+      }
+      $('player-count').textContent = list.length;
+      $('players-empty').classList.toggle('hidden', list.length > 0);
+    }
+    const renderAll = () => { renderOrder(); renderPlayers(); };
+
+    function snapshot() { return { t: 'state', armed: hs.armed, order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })) }; }
+    function broadcast() { const s = snapshot(); for (const c of conns.values()) if (c.open) { try { c.send(s); } catch {} } }
+    const changed = () => { save(); renderAll(); broadcast(); };
+
+    function reset() { hs.order = []; hs.armed = true; firstAt = null; changed(); }
+    function toggleLock() { hs.armed = !hs.armed; changed(); }
+    function kick(id) {
+      const c = conns.get(id);
+      if (c) { try { c.send({ t: 'kicked' }); } catch {} setTimeout(() => { try { c.close(); } catch {} }, 200); conns.delete(id); }
+      delete hs.players[id]; hs.order = hs.order.filter((o) => o.id !== id); changed();
+    }
+
+    function onBuzz(id) {
+      const p = hs.players[id];
+      if (!p || !hs.armed || hs.order.some((o) => o.id === id)) { broadcast(); return; }
+      hs.order.push({ id, name: p.name, at: Date.now() });
+      if ($('host-sound').checked) playSound(p.sound);
+      const ol = $('order'); changed();
+      const li = ol.lastElementChild; if (li) { li.classList.add('flash'); }
+    }
+
+    function handleConn(c) {
+      let id = c.metadata && c.metadata.clientId;
+      c.on('data', (msg) => {
+        if (!msg || typeof msg !== 'object') return;
+        if (msg.t === 'join') {
+          id = String(msg.id || id || uid()).slice(0, 40);
+          const old = conns.get(id); if (old && old !== c) { try { old.close(); } catch {} }
+          conns.set(id, c);
+          const prev = hs.players[id];
+          hs.players[id] = { id, name: String(msg.name || 'Player').slice(0, 24), sound: soundById(msg.sound).id, joinedAt: prev ? prev.joinedAt : Date.now() };
+          changed();
+        } else if (msg.t === 'buzz' && id && conns.get(id) === c) {
+          onBuzz(id);
+        } else if (msg.t === 'leave' && id) {
+          conns.delete(id); delete hs.players[id]; hs.order = hs.order.filter((o) => o.id !== id); changed();
+        }
+      });
+      const gone = () => { if (id && conns.get(id) === c) { conns.delete(id); renderPlayers(); } };
+      c.on('close', gone); c.on('error', gone);
+    }
+
+    function setHostConn(text, ok) { $('host-conn').textContent = text; $('host-conn').style.color = ok ? 'var(--ok)' : ''; }
+    function open() {
+      renderHead(); renderAll();
+      setHostConn('Starting…');
+      peer = new Peer(ID_PREFIX + hs.code, peerOptions());
+      peer.on('open', () => { codeAttempts = 0; setHostConn('● Room is open. Keep this tab open.', true); });
+      peer.on('connection', handleConn);
+      peer.on('disconnected', () => { setHostConn('Reconnecting to server…'); setTimeout(() => { if (!peer.destroyed) try { peer.reconnect(); } catch {} }, 1000); });
+      peer.on('error', (err) => {
+        console.warn('host peer error', err.type, err);
+        if (err.type === 'unavailable-id') {
+          // Code taken (or our old session hasn't timed out yet). Retry a few times, then pick a new code.
+          codeAttempts++;
+          try { peer.destroy(); } catch {}
+          if (codeAttempts >= 3) { hs = { code: randomCode(), players: {}, order: [], armed: true }; codeAttempts = 0; save(); }
+          setHostConn('Room code busy, retrying…');
+          setTimeout(open, 2500);
+        } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
+          setHostConn('Can\'t reach the connection server. Retrying…');
+          setTimeout(() => { if (!peer.destroyed) try { peer.reconnect(); } catch {} else open(); }, 3000);
+        }
+      });
+    }
+
+    $('reset-btn').onclick = reset;
+    $('lock-btn').onclick = toggleLock;
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.code === 'Space') { e.preventDefault(); reset(); }
+      if (e.key === 'l' || e.key === 'L') toggleLock();
+    });
+    $('copy-link').onclick = async () => {
+      try { await navigator.clipboard.writeText(joinUrl()); $('copy-link').textContent = 'Copied!'; }
+      catch { $('copy-link').textContent = 'Copy failed'; }
+      setTimeout(() => ($('copy-link').textContent = 'Copy link'), 1500);
+    };
+    $('new-room').onclick = () => {
+      if (!confirm('Start a new room? Everyone will need to join again with the new code.')) return;
+      for (const c of conns.values()) { try { c.send({ t: 'kicked' }); } catch {} }
+      store.del('buzzer-host');
+      setTimeout(() => location.reload(), 200);
+    };
+    window.addEventListener('beforeunload', () => { try { peer && peer.destroy(); } catch {} });
+
+    open();
+  }
+
+  // ================================================================= boot
+  if (typeof Peer === 'undefined') {
+    document.body.innerHTML = '<div class="wrap"><h1>Couldn\'t load</h1><p>The connection library failed to load. Check your internet connection and refresh.</p></div>';
+    return;
+  }
+  if (params.get('host')) startHost();
+  else if (params.get('room')) startPlayer(cleanCode(params.get('room')));
+  else startHome();
+})();
+</script>
+</body>
+</html>
