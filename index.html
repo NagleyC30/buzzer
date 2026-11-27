@@ -40,7 +40,7 @@
     width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
-  input.code { text-transform: uppercase; letter-spacing: .3em; font-weight: 700; font-size: 22px; text-align: center; }
+  input.code { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; font-size: 22px; text-align: center; }
   button {
     font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer;
     background: var(--text); color: var(--bg);
@@ -79,12 +79,12 @@
 
   /* ---------- Host ---------- */
   .host-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-  .room-code { font-size: 56px; font-weight: 800; letter-spacing: .15em; line-height: 1; }
+  .room-code { font-size: clamp(30px, 8.5vw, 56px); font-weight: 800; letter-spacing: .06em; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .join-box { display: flex; gap: 16px; align-items: center; }
   #qr { background: #fff; padding: 8px; border-radius: 10px; line-height: 0; }
   #qr img, #qr svg { width: 120px; height: 120px; }
   .host-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-  @media (max-width: 760px) { .host-grid { grid-template-columns: 1fr; } .room-code { font-size: 44px; } }
+  @media (max-width: 760px) { .host-grid { grid-template-columns: 1fr; } }
   ol.order { list-style: none; margin: 0; padding: 0; }
   ol.order li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
   ol.order li + li { margin-top: 8px; }
@@ -116,7 +116,7 @@
   <div class="home-grid">
     <div class="card stack">
       <h2>I'm a player</h2>
-      <div><label for="home-code">Room code</label><input id="home-code" class="code" maxlength="4" autocomplete="off" placeholder="ABCD"></div>
+      <div><label for="home-code">Room code</label><input id="home-code" class="code" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"></div>
       <button id="home-join" class="big">Join game</button>
     </div>
     <div class="card stack">
@@ -132,7 +132,7 @@
   <h1>Join game <span id="join-code-label" class="muted"></span></h1>
   <p class="sub">Enter your name and choose your buzzer sound.</p>
   <form id="join-form" class="card stack">
-    <div id="join-code-wrap"><label for="join-code">Room code</label><input id="join-code" class="code" maxlength="4" autocomplete="off" placeholder="ABCD"></div>
+    <div id="join-code-wrap"><label for="join-code">Room code</label><input id="join-code" class="code" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"></div>
     <div><label for="join-name">Your name</label><input id="join-name" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam" required></div>
     <div>
       <label for="join-sound">Your buzzer sound</label>
@@ -267,8 +267,18 @@
     del(k) { try { localStorage.removeItem(k); } catch {} },
   };
   const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-  const randomCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
-  const cleanCode = (s) => (s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  const CODE_LEN = 8; // 23^8 ≈ 78 billion possible codes
+  const randomCode = () => Array.from({ length: CODE_LEN }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+  const cleanCode = (s) => (s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, CODE_LEN);
+  const fmtCode = (c) => c.slice(0, 4) + (c.length > 4 ? '-' + c.slice(4) : '');
+  // The room code lives after the # in links: browsers never send that part to the web server.
+  const hashRoom = () => cleanCode(new URLSearchParams(location.hash.slice(1)).get('room') || '');
+  const linkFor = (code) => {
+    const u = new URL(location.pathname, location.origin);
+    for (const [k, v] of extraParams()) u.searchParams.set(k, v);
+    if (code) u.hash = 'room=' + code;
+    return u.toString();
+  };
   const show = (id) => { for (const v of document.querySelectorAll('section[id^="view-"]')) v.classList.toggle('hidden', v.id !== id); };
   const mqttOpts = (extra) => ({ clientId: 'gb_' + uid(), clean: true, keepalive: 20, reconnectPeriod: 2000, connectTimeout: 8000, protocolVersion: 4, ...extra });
 
@@ -344,8 +354,9 @@
     show('view-home');
     const go = () => {
       const code = cleanCode($('home-code').value);
-      if (code.length !== 4) { $('home-code').focus(); return; }
-      location.search = '?' + new URLSearchParams([...extraParams(), ['room', code]]).toString();
+      if (code.length !== CODE_LEN) { $('home-code').focus(); return; }
+      history.replaceState(null, '', linkFor(code));
+      startPlayer(code);
     };
     $('home-join').onclick = go;
     $('home-code').onkeydown = (e) => { if (e.key === 'Enter') go(); };
@@ -358,7 +369,7 @@
     const clientId = saved.clientId || uid();
 
     show('view-join');
-    if (code) { $('join-code').value = code; $('join-code-wrap').classList.add('hidden'); $('join-code-label').textContent = code; }
+    if (code) { $('join-code').value = fmtCode(code); $('join-code-wrap').classList.add('hidden'); $('join-code-label').textContent = fmtCode(code); }
     $('join-name').value = saved.name || '';
     for (const s of SOUNDS) $('join-sound').add(new Option(s.name, s.id));
     $('join-sound').value = saved.sound || SOUNDS[Math.floor(Math.random() * SOUNDS.length)].id;
@@ -369,13 +380,13 @@
       e.preventDefault();
       const room = cleanCode($('join-code').value);
       const name = $('join-name').value.trim().slice(0, 24);
-      if (room.length !== 4) return joinError('Enter the 4-letter room code.');
+      if (room.length !== CODE_LEN) return joinError(`Enter the ${CODE_LEN}-letter room code.`);
       if (!name) return joinError('Enter your name.');
       audio(); // unlock audio on this tap
       keepAwake();
       const me = { clientId, name, sound: $('join-sound').value };
       store.set('buzzer-player', me);
-      const u = new URL(location.href); u.searchParams.set('room', room); history.replaceState(null, '', u);
+      history.replaceState(null, '', linkFor(room));
       runPlayer(room, me);
     };
   }
@@ -385,7 +396,7 @@
     let rc = null, T = ''; // room key + channel, set once derived below
     show('view-player');
     $('me-name').textContent = me.name;
-    $('me-room').textContent = room;
+    $('me-room').textContent = fmtCode(room);
 
     let client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
     let left = false, kicked = false, hostOnline = null, state = null, lastJoin = 0, pendingBuzz = false; // pendingBuzz: round number of a buzz the host hasn't confirmed yet
@@ -413,7 +424,7 @@
         return;
       }
       if (hostOnline === null && !state) {
-        if (Date.now() - connectedAt > 4000) { setPill(true, 'Connected'); st.textContent = `Can't find room ${room}`; sub.textContent = 'Check the code, and that the host\'s screen is open. Still looking…'; }
+        if (Date.now() - connectedAt > 4000) { setPill(true, 'Connected'); st.textContent = `Can't find room ${fmtCode(room)}`; sub.textContent = 'Check the code, and that the host\'s screen is open. Still looking…'; }
         else { setPill(true, 'Connected'); st.textContent = 'Finding room…'; sub.textContent = ''; }
         return;
       }
@@ -501,7 +512,7 @@
     });
     $('leave-btn').onclick = () => {
       left = true; send({ t: 'leave' });
-      setTimeout(() => { try { client && client.end(); } catch {} location.href = location.pathname + (extraParams().toString() ? '?' + extraParams() : ''); }, 300);
+      setTimeout(() => { try { client && client.end(); } catch {} history.replaceState(null, '', linkFor('')); location.reload(); }, 300);
     };
 
     render();
@@ -516,7 +527,7 @@
     show('view-host');
     // Host state survives a refresh or the screen going off: same room code, same players.
     let hs = store.get('buzzer-host') || {};
-    if (!hs.code) hs = { code: randomCode() };
+    if (!hs.code || hs.code.length !== CODE_LEN) hs = { code: randomCode() }; // also replaces old 4-letter rooms
     hs.hostId = hs.hostId || uid();
     hs.players = hs.players || {}; hs.order = hs.order || [];
     hs.round = hs.round || 1; if (hs.armed === undefined) hs.armed = true;
@@ -530,20 +541,15 @@
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
     keepAwake();
 
-    function joinUrl() {
-      const u = new URL(location.pathname, location.origin);
-      for (const [k, v] of extraParams()) u.searchParams.set(k, v);
-      u.searchParams.set('room', hs.code);
-      return u.toString();
-    }
+    const joinUrl = () => linkFor(hs.code);
     function renderHead() {
-      $('room-code').textContent = hs.code;
+      $('room-code').textContent = fmtCode(hs.code);
       const url = joinUrl();
       $('join-url').textContent = url.replace(/^https?:\/\//, '');
       $('qr').innerHTML = '';
       if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
       else $('qr').classList.add('hidden');
-      document.title = `Buzzer · ${hs.code}`;
+      document.title = `Buzzer · ${fmtCode(hs.code)}`;
     }
     const isOnline = (id) => lastSeen.has(id) && Date.now() - lastSeen.get(id) < OFFLINE_AFTER_MS;
     function renderOrder() {
@@ -693,8 +699,9 @@
     document.body.innerHTML = '<div class="wrap"><h1>Couldn\'t load</h1><p>The connection library failed to load. Check your internet connection and refresh.</p></div>';
     return;
   }
+  window.addEventListener('hashchange', () => location.reload()); // a different join link pasted into this tab
   if (params.get('host')) startHost();
-  else if (params.get('room')) startPlayer(cleanCode(params.get('room')));
+  else if (hashRoom() || params.get('room')) startPlayer(hashRoom() || cleanCode(params.get('room')));
   else startHome();
 })();
 </script>

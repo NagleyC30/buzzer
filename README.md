@@ -8,7 +8,7 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
 
 ## How to use it
 
-1. **Host:** open the site on a laptop or TV and click **Host a game**. You get a 4-letter room code, a join link and a QR code. Keep this tab open: it runs the game.
+1. **Host:** open the site on a laptop or TV and click **Host a game**. You get an 8-letter room code (shown as `ABCD-EFGH`), a join link and a QR code. Keep this tab open: it runs the game.
 2. **Players:** scan the QR code, or go to the site and type the room code. Enter a name, choose a sound and tap **Let's play**.
 3. Play! The host presses **Reset buzzers** (or the space bar) between questions. **L** locks or unlocks the buzzers.
 
@@ -43,7 +43,9 @@ Netlify Drop (drag the folder onto app.netlify.com/drop) or Cloudflare Pages wor
 
 - Every message (names, buzzes, game state) is encrypted in the browser with AES-GCM, using a key derived from the room code. It's never sent in readable form. The servers only see scrambled data on a channel whose name is also derived from the code.
 - Outsiders can't read the game or send fake buzzes, because messages without the room's key are ignored.
-- Limit: a 4-letter code has about 280,000 possibilities. Someone determined could try them all by computer to unscramble a room. This protects against casual snooping, not a targeted attacker. Don't put anything sensitive in player names.
+- Room codes are 8 letters (about 78 billion possibilities), and the key is derived with 150,000 rounds of PBKDF2. Trying every code would take a powerful graphics card weeks.
+- In join links and QR codes the room code sits after the `#` (`.../buzzer/#room=ABCDEFGH`). Browsers never send that part to the web server, so GitHub never sees it.
+- It's still a family-game buzzer, not a secure messenger. Don't put anything sensitive in player names.
 
 ### Using your own message server (optional)
 
