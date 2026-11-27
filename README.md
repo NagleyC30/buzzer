@@ -27,18 +27,18 @@ Netlify Drop (drag the folder onto app.netlify.com/drop) or Cloudflare Pages wor
 
 ## How it works
 
-- The host's browser is the game server. Players connect directly to it over WebRTC using [PeerJS](https://peerjs.com/).
-- PeerJS's free public server is only used to introduce the devices to each other. Buzzes then travel straight from each phone to the host.
-- Buzz order is whatever order the host's browser receives the buzzes in. Over normal Wi-Fi or 4G/5G, timing differences are a few tens of milliseconds.
-- Sounds are generated in the browser with the Web Audio API, so there are no audio files.
+- Everyone connects through free public message servers (MQTT over secure WebSockets: [EMQX](https://www.emqx.com/en/mqtt/public-mqtt5-broker) and [HiveMQ](https://www.hivemq.com/mqtt/public-mqtt-broker/)). This is the same kind of connection ordinary websites use, so it works on mobile data and most strict networks.
+- The host listens on both servers. Each player uses the first one that works and switches to the backup if it can't connect.
+- The host's browser keeps the game state. Buzz order is the order the host receives the buzzes.
+- The room's latest state is saved on the servers. If the host's screen sleeps or the page reloads, the room keeps its code, players see "Host's screen is offline", and everything picks up again when it comes back.
+- Host and player screens ask the phone to stay awake while the page is open.
+- Sounds are generated in the browser with the Web Audio API. On iPhone they play as media, so the silent switch doesn't mute them. The media volume still needs to be up.
 
 ### Limitations
 
-- The host's tab must stay open. If it closes, the room closes.
-- Some very strict networks (some corporate or school firewalls) block WebRTC. If one player can't connect, try switching them to mobile data.
-- On iPhone, make sure the ring/silent switch isn't on silent if you want to hear the buzzer sound.
+- The host's screen needs to stay on during a game. A laptop or tablet plugged in is ideal. If it sleeps, buzzes can't be counted until it wakes.
+- The public servers are shared, best-effort services. Room messages (player names and buzzes) aren't private. Anyone who knew the room code could see them.
 
-### Using your own PeerJS server (optional)
+### Using your own message server (optional)
 
-If the public PeerJS server is ever down, run your own (`npx peer --port 9000`) and add these to the URL:
-`?peerhost=your.host&peerport=9000&peersecure=0`. Join links and QR codes keep these settings.
+Add `?brokers=wss://your.server/mqtt` (comma-separate several) to the host URL. Join links and QR codes keep this setting.

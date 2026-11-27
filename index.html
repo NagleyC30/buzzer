@@ -200,32 +200,27 @@
   </div>
 </section>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script>
 (() => {
   'use strict';
 
   // ---------------------------------------------------------------- config
-  const ID_PREFIX = 'gamebuzzer-v1-';            // namespaces our room ids on the public PeerJS server
-  const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ';  // no I, L, O (easy to misread)
+  // Everyone talks through free public MQTT message servers over secure WebSockets (the same
+  // kind of connection normal websites use), so it works on mobile data and strict networks.
+  // The host listens on all of them; each player uses the first one that works.
+  const DEFAULT_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
   const params = new URLSearchParams(location.search);
+  const BROKERS = params.get('brokers') ? params.get('brokers').split(',').filter(Boolean) : DEFAULT_BROKERS;
+  const TOPIC = (code) => `gamebuzzer-v2/${code}`;
+  const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // no I, L, O (easy to misread)
+  const HEARTBEAT_MS = 10000, OFFLINE_AFTER_MS = 35000;
 
-  // Optional self-hosted PeerJS server: ?peerhost=host&peerport=9000&peerpath=/&peersecure=0
-  function peerOptions() {
-    const o = { debug: 1 };
-    if (params.get('peerhost')) {
-      o.host = params.get('peerhost');
-      o.port = Number(params.get('peerport') || 443);
-      o.path = params.get('peerpath') || '/';
-      o.secure = params.get('peersecure') !== '0';
-    }
-    return o;
-  }
-  // Keep the peer-server params when building links.
+  // Keep a custom broker list when building links.
   function extraParams() {
     const keep = new URLSearchParams();
-    for (const k of ['peerhost', 'peerport', 'peerpath', 'peersecure']) if (params.get(k)) keep.set(k, params.get(k));
+    if (params.get('brokers')) keep.set('brokers', params.get('brokers'));
     return keep;
   }
 
@@ -239,13 +234,47 @@
   const randomCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
   const cleanCode = (s) => (s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   const show = (id) => { for (const v of document.querySelectorAll('section[id^="view-"]')) v.classList.toggle('hidden', v.id !== id); };
+  const parse = (buf) => { try { const s = buf.toString(); return s ? JSON.parse(s) : null; } catch { return null; } };
+  const mqttOpts = (extra) => ({ clientId: 'gb_' + uid(), clean: true, keepalive: 20, reconnectPeriod: 2000, connectTimeout: 8000, protocolVersion: 4, ...extra });
+
+  // ---------------------------------------------------------------- keep the screen awake
+  // A phone that goes to sleep drops its connection, so ask the browser to keep the screen on.
+  let wantAwake = false, wakeLock = null;
+  async function keepAwake() {
+    wantAwake = true;
+    try {
+      if ('wakeLock' in navigator && document.visibilityState === 'visible' && !wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch {}
+  }
+  document.addEventListener('visibilitychange', () => { if (wantAwake && document.visibilityState === 'visible') keepAwake(); });
 
   // ---------------------------------------------------------------- sounds
-  // Each sound is synthesised with Web Audio, so there are no audio files to host.
-  let ctx = null;
+  // On iPhone, web-page sound is treated like a ringtone and muted by the silent switch.
+  // Marking it as "playback" (media) makes it play like a video would.
+  function setPlaybackSession() { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch {} }
+  setPlaybackSession();
+  let ctx = null, silentEl = null;
+  function silentWav() {
+    const n = 4000, b = new Uint8Array(44 + n), v = new DataView(b.buffer);
+    const w = (o, s) => [...s].forEach((c, i) => (b[o + i] = c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true);
+    v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true);
+    v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+    return 'data:audio/wav;base64,' + btoa(String.fromCharCode(...b));
+  }
   function audio() {
+    setPlaybackSession();
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    // Older iPhones (before iOS 17) have no audioSession setting: playing a silent media
+    // clip puts the page in media mode so the silent switch doesn't mute the buzzer.
+    if (!navigator.audioSession && !silentEl && /iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document) {
+      silentEl = new Audio(silentWav()); silentEl.loop = true; silentEl.setAttribute('playsinline', '');
+      silentEl.play().catch(() => { silentEl = null; });
+    }
     return ctx;
   }
   function tone(freq, start, dur, type = 'square', vol = 0.25, endFreq = null) {
@@ -307,13 +336,13 @@
       const name = $('join-name').value.trim().slice(0, 24);
       if (room.length !== 4) return joinError('Enter the 4-letter room code.');
       if (!name) return joinError('Enter your name.');
-      audio(); // unlock audio on this user gesture
+      audio(); // unlock audio on this tap
+      keepAwake();
       const me = { clientId, name, sound: $('join-sound').value };
       store.set('buzzer-player', me);
       const u = new URL(location.href); u.searchParams.set('room', room); history.replaceState(null, '', u);
       runPlayer(room, me);
     };
-    if (saved.name && code && params.get('auto') === '1') $('join-form').requestSubmit();
   }
   function joinError(msg) { $('join-error').textContent = msg; $('join-error').classList.remove('hidden'); }
 
@@ -321,100 +350,124 @@
     show('view-player');
     $('me-name').textContent = me.name;
     $('me-room').textContent = room;
+    const T = TOPIC(room);
 
-    let peer = null, conn = null, retry = null, joined = false, left = false;
-    let state = { armed: false, order: [] };
+    let client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
+    let left = false, kicked = false, hostOnline = null, state = null, lastJoin = 0, pendingBuzz = false; // pendingBuzz: round number of a buzz the host hasn't confirmed yet
 
-    const setConn = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
+    const isConnected = () => client && client.connected;
+    const joined = () => !!(state && Array.isArray(state.players) && state.players.includes(me.clientId));
+    const send = (msg) => { if (isConnected()) client.publish(T + '/in', JSON.stringify({ ...msg, id: me.clientId }), { qos: 1 }); };
+    function sendJoin(force) {
+      if (!isConnected() || (!force && Date.now() - lastJoin < 3000)) return;
+      lastJoin = Date.now();
+      send({ t: 'join', name: me.name, sound: me.sound });
+    }
+
     function render() {
-      const btn = $('buzzer');
-      const pos = state.order.findIndex((o) => o.id === me.clientId);
-      btn.classList.toggle('mine', pos >= 0);
-      if (!joined) {
-        btn.disabled = true; $('status').textContent = 'Connecting…'; $('status-sub').textContent = '';
-      } else if (pos >= 0) {
-        btn.disabled = true;
-        $('status').textContent = pos === 0 ? 'You buzzed first! 🎉' : `You buzzed #${pos + 1}`;
-        $('status-sub').textContent = pos === 0 ? '' : `${state.order[0].name} was first`;
+      const btn = $('buzzer'), st = $('status'), sub = $('status-sub');
+      const order = (state && state.order) || [];
+      const pos = order.findIndex((o) => o.id === me.clientId);
+      const setPill = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
+      btn.classList.toggle('mine', pos >= 0 || pendingBuzz);
+      btn.disabled = true;
+      if (kicked) { setPill(false, 'Removed'); st.textContent = 'The host removed you from the game.'; sub.textContent = ''; return; }
+      if (!isConnected()) {
+        setPill(false, 'Connecting…'); st.textContent = 'Connecting…';
+        sub.textContent = BROKERS.length > 1 && brokerIdx > 0 ? `Trying backup server ${brokerIdx % BROKERS.length + 1}…` : '';
+        return;
+      }
+      if (hostOnline === null && !state) {
+        if (Date.now() - connectedAt > 4000) { setPill(true, 'Connected'); st.textContent = `Can't find room ${room}`; sub.textContent = 'Check the code, and that the host\'s screen is open. Still looking…'; }
+        else { setPill(true, 'Connected'); st.textContent = 'Finding room…'; sub.textContent = ''; }
+        return;
+      }
+      if (hostOnline === false) { setPill(false, 'Host offline'); st.textContent = 'Host\'s screen is offline'; sub.textContent = 'Waiting for it to come back…'; return; }
+      if (!joined()) { setPill(true, 'Connected'); st.textContent = 'Joining…'; sub.textContent = ''; return; }
+      setPill(true, 'Connected');
+      if (pos >= 0 || pendingBuzz) {
+        const p = pos >= 0 ? pos : order.length;
+        st.textContent = p === 0 ? 'You buzzed first! 🎉' : `You buzzed #${p + 1}`;
+        sub.textContent = p === 0 || !order[0] ? '' : `${order[0].name} was first`;
       } else if (!state.armed) {
-        btn.disabled = true; $('status').textContent = 'Buzzers locked';
-        $('status-sub').textContent = state.order.length ? `${state.order[0].name} buzzed first` : 'Wait for the host';
+        st.textContent = 'Buzzers locked';
+        sub.textContent = order.length ? `${order[0].name} buzzed first` : 'Wait for the host';
       } else {
-        btn.disabled = false; $('status').textContent = 'Ready!';
-        $('status-sub').textContent = state.order.length ? `${state.order[0].name} buzzed first. You can still buzz in.` : 'Tap the buzzer to buzz in';
+        btn.disabled = false; st.textContent = 'Ready!';
+        sub.textContent = order.length ? `${order[0].name} buzzed first. You can still buzz in.` : 'Tap the buzzer to buzz in';
       }
     }
 
     function buzz(e) {
       if (e) e.preventDefault();
       const btn = $('buzzer');
-      if (btn.disabled || !conn || !conn.open) return;
+      if (btn.disabled || !isConnected() || !state) return;
       playSound(me.sound);
       if (navigator.vibrate) navigator.vibrate(80);
       btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120);
-      // Optimistically show as buzzed; host's state update will confirm the position.
-      state = { ...state, order: [...state.order, { id: me.clientId, name: me.name }] };
-      render();
-      conn.send({ t: 'buzz' });
+      pendingBuzz = state.round; render(); // show it straight away; the host's update confirms the position
+      send({ t: 'buzz', round: state.round });
     }
-    // pointerdown is faster than click on touch screens
     $('buzzer').addEventListener('pointerdown', buzz);
     document.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter') && !$('view-player').classList.contains('hidden')) buzz(e); });
 
-    function scheduleRetry(msg) {
-      if (left) return;
-      joined = false; render();
-      setConn(false, msg || 'Reconnecting…');
-      clearTimeout(retry); retry = setTimeout(connect, 2000);
-    }
-
     function connect() {
-      if (left) return;
-      if (!peer || peer.destroyed) {
-        peer = new Peer(peerOptions());
-        peer.on('open', () => openConn());
-        peer.on('error', (err) => {
-          console.warn('peer error', err.type, err);
-          if (err.type === 'peer-unavailable') scheduleRetry(`Room ${room} not found. Is the host's screen open? Retrying…`);
-          else { try { peer.destroy(); } catch {} scheduleRetry('Connection problem. Retrying…'); }
-        });
-        peer.on('disconnected', () => { if (!left && !peer.destroyed) { try { peer.reconnect(); } catch {} } });
-      } else if (peer.open) {
-        openConn();
-      } else {
-        try { peer.reconnect(); } catch { peer.destroy(); peer = null; connect(); }
-      }
-    }
-    function openConn() {
-      if (conn) { try { conn.close(); } catch {} }
-      setConn(false, 'Joining room…');
-      conn = peer.connect(ID_PREFIX + room, { reliable: true, metadata: { clientId: me.clientId } });
-      const c = conn;
-      c.on('open', () => c.send({ t: 'join', id: me.clientId, name: me.name, sound: me.sound }));
-      c.on('data', (msg) => {
-        if (c !== conn || !msg) return;
-        if (msg.t === 'state') {
-          joined = true; setConn(true, 'Connected');
-          state = { armed: msg.armed, order: msg.order || [] };
-          render();
-        } else if (msg.t === 'kicked') {
-          left = true; setConn(false, 'Removed by host');
-          $('status').textContent = 'The host removed you from the game.'; $('status-sub').textContent = '';
-          $('buzzer').disabled = true;
-          try { peer.destroy(); } catch {}
-        }
+      if (left || kicked) return;
+      const url = BROKERS[brokerIdx % BROKERS.length];
+      const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/in', payload: JSON.stringify({ t: 'offline', id: me.clientId }), qos: 1, retain: false } }));
+      client = c; lastUp = Date.now(); hostOnline = null; state = null;
+      c.on('connect', () => {
+        if (c !== client) return;
+        connectedAt = Date.now(); lastUp = Date.now();
+        c.subscribe([T + '/state', T + '/host', T + '/p/' + me.clientId], { qos: 1 });
+        sendJoin(true); render();
       });
-      c.on('close', () => { if (c === conn) scheduleRetry('Lost connection. Reconnecting…'); });
-      c.on('error', () => { if (c === conn) scheduleRetry('Lost connection. Reconnecting…'); });
+      c.on('message', (topic, buf) => {
+        if (c !== client) return;
+        const msg = parse(buf);
+        if (topic === T + '/host') {
+          const wasOnline = hostOnline;
+          hostOnline = msg ? !!msg.online : null;
+          if (hostOnline && !wasOnline) sendJoin(true); // host (re)appeared: say hello so it shows us online
+        }
+        else if (topic === T + '/state') {
+          state = msg && msg.t === 'state' ? msg : null;
+          if (state) {
+            const inOrder = (state.order || []).some((o) => o.id === me.clientId);
+            // Clear the "just buzzed" display once the host has counted it, reset, or locked.
+            if (inOrder || state.round !== pendingBuzz || !state.armed) pendingBuzz = false;
+            if (!joined()) sendJoin();
+          }
+        } else if (msg && msg.t === 'kicked') {
+          kicked = true; left = true; try { c.end(true); } catch {}
+        }
+        render();
+      });
+      c.on('offline', render); c.on('close', render); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
     }
 
-    // Phones drop connections when the screen sleeps; reconnect when they come back.
+    // Switch to the backup server if this one hasn't worked for 10 seconds.
+    setInterval(() => {
+      if (left || kicked) return;
+      if (isConnected()) { lastUp = Date.now(); render(); return; }
+      if (Date.now() - lastUp > 10000 && BROKERS.length > 1) {
+        try { client.end(true); } catch {}
+        brokerIdx++; connect();
+      }
+      render();
+    }, 2000);
+    setInterval(() => { if (isConnected() && joined()) send({ t: 'hb' }); else render(); }, HEARTBEAT_MS);
+
+    // Phones pause pages when the screen sleeps; reconnect straight away when they wake.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && !left && (!conn || !conn.open)) { clearTimeout(retry); connect(); }
+      if (document.visibilityState !== 'visible' || left) return;
+      audio();
+      if (client && !client.connected) { try { client.reconnect(); } catch {} }
+      else sendJoin(true);
     });
     $('leave-btn').onclick = () => {
-      left = true; try { conn && conn.send({ t: 'leave' }); } catch {}
-      setTimeout(() => { try { peer && peer.destroy(); } catch {} location.href = location.pathname + (extraParams().toString() ? '?' + extraParams() : ''); }, 150);
+      left = true; send({ t: 'leave' });
+      setTimeout(() => { try { client && client.end(); } catch {} location.href = location.pathname + (extraParams().toString() ? '?' + extraParams() : ''); }, 300);
     };
 
     render(); connect();
@@ -423,18 +476,21 @@
   // ================================================================= HOST
   function startHost() {
     show('view-host');
-    // Host state survives a page refresh (same room code, same players).
+    // Host state survives a refresh or the screen going off: same room code, same players.
     let hs = store.get('buzzer-host') || {};
-    if (!hs.code) hs = { code: randomCode(), players: {}, order: [], armed: true };
+    if (!hs.code) hs = { code: randomCode() };
+    hs.hostId = hs.hostId || uid();
     hs.players = hs.players || {}; hs.order = hs.order || [];
-    const conns = new Map(); // clientId -> DataConnection
-    let peer = null, firstAt = null, codeAttempts = 0;
-    const save = () => store.set('buzzer-host', { code: hs.code, players: hs.players, order: hs.order, armed: hs.armed });
+    hs.round = hs.round || 1; if (hs.armed === undefined) hs.armed = true;
+    const T = TOPIC(hs.code);
+    const lastSeen = new Map(); // player id -> time of last message
+    const clients = [];
+    const save = () => store.set('buzzer-host', hs);
 
-    // The browser blocks sound until the host interacts with the page once.
-    let audioReady = false;
-    const unlock = () => { if (!audioReady) { audio(); audioReady = true; } };
+    // The browser blocks sound (and keeping the screen on) until the host taps the page once.
+    const unlock = () => { audio(); keepAwake(); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+    keepAwake();
 
     function joinUrl() {
       const u = new URL(location.pathname, location.origin);
@@ -451,16 +507,16 @@
       else $('qr').classList.add('hidden');
       document.title = `Buzzer · ${hs.code}`;
     }
+    const isOnline = (id) => lastSeen.has(id) && Date.now() - lastSeen.get(id) < OFFLINE_AFTER_MS;
     function renderOrder() {
       const ol = $('order'); ol.innerHTML = '';
       const ords = ['1st', '2nd', '3rd'];
       hs.order.forEach((o, i) => {
         const li = document.createElement('li'); if (i === 0) li.className = 'first';
-        const delta = i === 0 ? '' : `+${((o.at - hs.order[0].at) / 1000).toFixed(2)}s`;
         li.innerHTML = `<span class="pos"></span><span class="name"></span><span class="delta"></span>`;
         li.querySelector('.pos').textContent = ords[i] || `${i + 1}th`;
         li.querySelector('.name').textContent = (hs.players[o.id] && hs.players[o.id].name) || o.name;
-        li.querySelector('.delta').textContent = delta;
+        li.querySelector('.delta').textContent = i === 0 ? '' : `+${((o.at - hs.order[0].at) / 1000).toFixed(2)}s`;
         ol.appendChild(li);
       });
       $('order-empty').classList.toggle('hidden', hs.order.length > 0);
@@ -471,7 +527,7 @@
       const ul = $('players'); ul.innerHTML = '';
       const list = Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
       for (const p of list) {
-        const online = conns.has(p.id) && conns.get(p.id).open;
+        const online = isOnline(p.id);
         const li = document.createElement('li'); if (!online) li.className = 'offline';
         li.innerHTML = `<span class="dot"></span><span class="name"></span><button class="secondary" style="padding:4px 10px" title="Play their sound">🔊</button><button class="x" title="Remove player">×</button>`;
         li.querySelector('.dot').classList.toggle('on', online);
@@ -483,72 +539,85 @@
       $('player-count').textContent = list.length;
       $('players-empty').classList.toggle('hidden', list.length > 0);
     }
+    function renderConn() {
+      const up = clients.filter((c) => c.connected).length;
+      const el = $('host-conn');
+      if (up) { el.textContent = '● Room is open. Keep this screen on.'; el.style.color = 'var(--ok)'; }
+      else { el.textContent = 'Connecting… (check this device\'s internet)'; el.style.color = ''; }
+    }
     const renderAll = () => { renderOrder(); renderPlayers(); };
 
-    function snapshot() { return { t: 'state', armed: hs.armed, order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })) }; }
-    function broadcast() { const s = snapshot(); for (const c of conns.values()) if (c.open) { try { c.send(s); } catch {} } }
+    const stateMsg = () => JSON.stringify({
+      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed,
+      order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })),
+      players: Object.keys(hs.players),
+    });
+    const hostMsg = (online) => JSON.stringify({ online, hostId: hs.hostId });
+    function publishAll(topic, payload, opts) { for (const c of clients) if (c.connected) c.publish(topic, payload, opts); }
+    const broadcast = () => publishAll(T + '/state', stateMsg(), { qos: 1, retain: true });
     const changed = () => { save(); renderAll(); broadcast(); };
 
-    function reset() { hs.order = []; hs.armed = true; firstAt = null; changed(); }
+    function reset() { hs.order = []; hs.armed = true; hs.round++; changed(); }
     function toggleLock() { hs.armed = !hs.armed; changed(); }
     function kick(id) {
-      const c = conns.get(id);
-      if (c) { try { c.send({ t: 'kicked' }); } catch {} setTimeout(() => { try { c.close(); } catch {} }, 200); conns.delete(id); }
-      delete hs.players[id]; hs.order = hs.order.filter((o) => o.id !== id); changed();
+      publishAll(T + '/p/' + id, JSON.stringify({ t: 'kicked' }), { qos: 1 });
+      delete hs.players[id]; lastSeen.delete(id); hs.order = hs.order.filter((o) => o.id !== id); changed();
     }
 
-    function onBuzz(id) {
-      const p = hs.players[id];
-      if (!p || !hs.armed || hs.order.some((o) => o.id === id)) { broadcast(); return; }
-      hs.order.push({ id, name: p.name, at: Date.now() });
-      if ($('host-sound').checked) playSound(p.sound);
-      const ol = $('order'); changed();
-      const li = ol.lastElementChild; if (li) { li.classList.add('flash'); }
+    function handle(msg) {
+      if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string') return;
+      const id = msg.id.slice(0, 40);
+      if (msg.t === 'offline') { lastSeen.delete(id); renderPlayers(); return; }
+      if (msg.t === 'leave') { lastSeen.delete(id); delete hs.players[id]; hs.order = hs.order.filter((o) => o.id !== id); changed(); return; }
+      lastSeen.set(id, Date.now());
+      if (msg.t === 'join') {
+        const prev = hs.players[id];
+        hs.players[id] = { id, name: String(msg.name || 'Player').slice(0, 24), sound: soundById(msg.sound).id, joinedAt: prev ? prev.joinedAt : Date.now() };
+        changed();
+      } else if (msg.t === 'buzz') {
+        const p = hs.players[id];
+        // Ignore buzzes from before the last reset, while locked, or repeats.
+        if (!p || !hs.armed || msg.round !== hs.round || hs.order.some((o) => o.id === id)) { broadcast(); return; }
+        hs.order.push({ id, name: p.name, at: Date.now() });
+        if ($('host-sound').checked) playSound(p.sound);
+        changed();
+        const li = $('order').lastElementChild; if (li) li.classList.add('flash');
+      } else if (msg.t === 'hb') {
+        if (!hs.players[id]) broadcast(); // unknown player: they'll see they're missing and re-join
+        else renderPlayers();
+      }
     }
 
-    function handleConn(c) {
-      let id = c.metadata && c.metadata.clientId;
-      c.on('data', (msg) => {
-        if (!msg || typeof msg !== 'object') return;
-        if (msg.t === 'join') {
-          id = String(msg.id || id || uid()).slice(0, 40);
-          const old = conns.get(id); if (old && old !== c) { try { old.close(); } catch {} }
-          conns.set(id, c);
-          const prev = hs.players[id];
-          hs.players[id] = { id, name: String(msg.name || 'Player').slice(0, 24), sound: soundById(msg.sound).id, joinedAt: prev ? prev.joinedAt : Date.now() };
-          changed();
-        } else if (msg.t === 'buzz' && id && conns.get(id) === c) {
-          onBuzz(id);
-        } else if (msg.t === 'leave' && id) {
-          conns.delete(id); delete hs.players[id]; hs.order = hs.order.filter((o) => o.id !== id); changed();
-        }
-      });
-      const gone = () => { if (id && conns.get(id) === c) { conns.delete(id); renderPlayers(); } };
-      c.on('close', gone); c.on('error', gone);
+    function connectAll() {
+      for (const url of BROKERS) {
+        const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/host', payload: hostMsg(false), qos: 1, retain: true } }));
+        c.on('connect', () => {
+          c.subscribe([T + '/in', T + '/host'], { qos: 1 });
+          c.publish(T + '/host', hostMsg(true), { qos: 1, retain: true });
+          c.publish(T + '/state', stateMsg(), { qos: 1, retain: true });
+          renderConn();
+        });
+        c.on('message', (topic, buf) => {
+          const msg = parse(buf);
+          if (topic === T + '/in') handle(msg);
+          // Someone else is hosting this code (very unlikely): move to a new room.
+          else if (topic === T + '/host' && msg && msg.online && msg.hostId !== hs.hostId) newRoom(true);
+          // A stale "offline" from our own previous visit: correct it.
+          else if (topic === T + '/host' && msg && !msg.online && msg.hostId === hs.hostId) c.publish(T + '/host', hostMsg(true), { qos: 1, retain: true });
+        });
+        c.on('offline', renderConn); c.on('close', renderConn); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
+        clients.push(c);
+      }
     }
 
-    function setHostConn(text, ok) { $('host-conn').textContent = text; $('host-conn').style.color = ok ? 'var(--ok)' : ''; }
-    function open() {
-      renderHead(); renderAll();
-      setHostConn('Starting…');
-      peer = new Peer(ID_PREFIX + hs.code, peerOptions());
-      peer.on('open', () => { codeAttempts = 0; setHostConn('● Room is open. Keep this tab open.', true); });
-      peer.on('connection', handleConn);
-      peer.on('disconnected', () => { setHostConn('Reconnecting to server…'); setTimeout(() => { if (!peer.destroyed) try { peer.reconnect(); } catch {} }, 1000); });
-      peer.on('error', (err) => {
-        console.warn('host peer error', err.type, err);
-        if (err.type === 'unavailable-id') {
-          // Code taken (or our old session hasn't timed out yet). Retry a few times, then pick a new code.
-          codeAttempts++;
-          try { peer.destroy(); } catch {}
-          if (codeAttempts >= 3) { hs = { code: randomCode(), players: {}, order: [], armed: true }; codeAttempts = 0; save(); }
-          setHostConn('Room code busy, retrying…');
-          setTimeout(open, 2500);
-        } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-          setHostConn('Can\'t reach the connection server. Retrying…');
-          setTimeout(() => { if (!peer.destroyed) try { peer.reconnect(); } catch {} else open(); }, 3000);
-        }
-      });
+    function newRoom(silent) {
+      if (!silent && !confirm('Start a new room? Everyone will need to join again with the new code.')) return;
+      for (const id of Object.keys(hs.players)) publishAll(T + '/p/' + id, JSON.stringify({ t: 'kicked' }), { qos: 1 });
+      // Clear this room's saved messages from the servers.
+      publishAll(T + '/state', '', { qos: 1, retain: true });
+      publishAll(T + '/host', '', { qos: 1, retain: true });
+      store.del('buzzer-host');
+      setTimeout(() => location.reload(), 400);
     }
 
     $('reset-btn').onclick = reset;
@@ -563,19 +632,19 @@
       catch { $('copy-link').textContent = 'Copy failed'; }
       setTimeout(() => ($('copy-link').textContent = 'Copy link'), 1500);
     };
-    $('new-room').onclick = () => {
-      if (!confirm('Start a new room? Everyone will need to join again with the new code.')) return;
-      for (const c of conns.values()) { try { c.send({ t: 'kicked' }); } catch {} }
-      store.del('buzzer-host');
-      setTimeout(() => location.reload(), 200);
-    };
-    window.addEventListener('beforeunload', () => { try { peer && peer.destroy(); } catch {} });
+    $('new-room').onclick = () => newRoom(false);
+    // Waking from sleep: reconnect at once instead of waiting for the retry timer.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      for (const c of clients) if (!c.connected) { try { c.reconnect(); } catch {} }
+    });
+    setInterval(renderPlayers, 5000);
 
-    open();
+    renderHead(); renderAll(); renderConn(); connectAll();
   }
 
   // ================================================================= boot
-  if (typeof Peer === 'undefined') {
+  if (typeof mqtt === 'undefined') {
     document.body.innerHTML = '<div class="wrap"><h1>Couldn\'t load</h1><p>The connection library failed to load. Check your internet connection and refresh.</p></div>';
     return;
   }
