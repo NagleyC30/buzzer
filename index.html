@@ -74,6 +74,11 @@
   #buzzer:active:not(:disabled), #buzzer.pressed { transform: translateY(10px); box-shadow: 0 4px 0 #7a1a1d, 0 10px 20px rgba(0,0,0,.35); }
   #buzzer:disabled { opacity: 1; filter: grayscale(1) brightness(.85); cursor: default; }
   #buzzer.mine { filter: none; background: radial-gradient(circle at 35% 30%, #ffe48a, var(--gold) 50%, #8a6a08); box-shadow: 0 4px 0 #5e4805, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
+  /* Jeopardy: locked while the host reads (still tappable), and the ¼-second early-buzz lockout */
+  #buzzer.wait { background: radial-gradient(circle at 35% 30%, #d0d0d4, #94949a 50%, #5f5f65); box-shadow: 0 14px 0 #3a3a3e, 0 24px 40px rgba(0,0,0,.35); }
+  #buzzer.lockout, #buzzer.lockout:active { background: radial-gradient(circle at 35% 30%, #6e6e74, #404046 55%, #232326); box-shadow: 0 4px 0 #111, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
+  #buzzer.go { animation: go .4s ease-out; }
+  @keyframes go { from { filter: brightness(1.7); } to { filter: none; } }
   #status { font-size: 22px; font-weight: 700; text-align: center; min-height: 1.4em; }
   #status-sub { color: var(--muted); text-align: center; margin-top: -18px; min-height: 1.4em; }
 
@@ -102,7 +107,9 @@
   .empty { color: var(--muted); padding: 24px 0; text-align: center; }
   .host-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .host-actions button { flex: 1; min-width: 140px; }
-  #reset-btn { background: var(--accent); color: #fff; font-size: 18px; padding: 16px; }
+  #reset-btn { font-size: 18px; padding: 16px; }
+  #lock-btn.open-now { background: var(--ok); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
+  #lock-btn.lock-now { background: var(--accent); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
   .flash { animation: flash .5s ease-out; }
   @keyframes flash { from { box-shadow: 0 0 0 6px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
 </style>
@@ -182,8 +189,8 @@
       <ol id="order" class="order"></ol>
       <div id="order-empty" class="empty">Waiting for someone to buzz…</div>
       <div class="host-actions">
-        <button id="reset-btn">Reset buzzers (space)</button>
-        <button id="lock-btn" class="secondary">Lock buzzers</button>
+        <button id="reset-btn" class="secondary">New question (N)</button>
+        <button id="lock-btn" class="secondary">Open buzzers (space)</button>
       </div>
     </div>
     <div class="card">
@@ -192,6 +199,10 @@
       <div id="players-empty" class="empty">No one has joined yet.</div>
       <div class="host-actions">
         <label class="row" style="font-weight:500; margin:0"><input type="checkbox" id="host-sound" checked style="width:auto"> Play sounds here</label>
+      </div>
+      <div class="host-actions">
+        <label class="row" style="font-weight:500; margin:0; align-items:flex-start"><input type="checkbox" id="jeopardy" checked style="width:auto; margin-top:4px">
+          <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked. Buzzing before you open the buzzers locks that player out for ¼ second.</span></span></label>
       </div>
       <div class="host-actions">
         <button id="new-room" class="secondary">New room</button>
@@ -400,6 +411,17 @@
 
     let client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
     let left = false, kicked = false, hostOnline = null, state = null, lastJoin = 0, pendingBuzz = false; // pendingBuzz: round number of a buzz the host hasn't confirmed yet
+    // Jeopardy rule: pressing before the buzzers open locks this player out for LOCKOUT_MS.
+    const LOCKOUT_MS = 250;
+    let lockUntil = 0, lockTimer = null, btnMode = 'off'; // btnMode: off | wait | lockout | ready
+    const lockedOut = () => performance.now() < lockUntil;
+    function setBtn(mode) {
+      const btn = $('buzzer'); btnMode = mode;
+      btn.disabled = mode === 'off';
+      btn.classList.toggle('wait', mode === 'wait');
+      btn.classList.toggle('lockout', mode === 'lockout');
+      btn.textContent = mode === 'wait' ? 'WAIT' : mode === 'lockout' ? 'LOCKED' : 'BUZZ';
+    }
 
     const isConnected = () => client && client.connected;
     const joined = () => !!(state && Array.isArray(state.players) && state.players.includes(me.clientId));
@@ -416,7 +438,7 @@
       const pos = order.findIndex((o) => o.id === me.clientId);
       const setPill = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
       btn.classList.toggle('mine', pos >= 0 || pendingBuzz);
-      btn.disabled = true;
+      setBtn('off');
       if (kicked) { setPill(false, 'Removed'); st.textContent = 'The host removed you from the game.'; sub.textContent = ''; return; }
       if (!isConnected()) {
         setPill(false, 'Connecting…'); st.textContent = 'Connecting…';
@@ -435,11 +457,18 @@
         const p = pos >= 0 ? pos : order.length;
         st.textContent = p === 0 ? 'You buzzed first! 🎉' : `You buzzed #${p + 1}`;
         sub.textContent = p === 0 || !order[0] ? '' : `${order[0].name} was first`;
+      } else if (!state.armed && state.jeopardy) {
+        // Still tappable, so an early press can be caught and penalised.
+        setBtn(lockedOut() ? 'lockout' : 'wait');
+        st.textContent = lockedOut() ? 'Too early! Locked out' : 'Wait for it…';
+        sub.textContent = order.length ? `${order[0].name} buzzed first` : 'Buzz when the host opens the buzzers. Too early locks you out for ¼ second.';
       } else if (!state.armed) {
         st.textContent = 'Buzzers locked';
         sub.textContent = order.length ? `${order[0].name} buzzed first` : 'Wait for the host';
+      } else if (lockedOut()) {
+        setBtn('lockout'); st.textContent = 'Too early! Locked out'; sub.textContent = '';
       } else {
-        btn.disabled = false; st.textContent = 'Ready!';
+        setBtn('ready'); st.textContent = 'Ready!';
         sub.textContent = order.length ? `${order[0].name} buzzed first. You can still buzz in.` : 'Tap the buzzer to buzz in';
       }
     }
@@ -447,7 +476,16 @@
     function buzz(e) {
       if (e) e.preventDefault();
       const btn = $('buzzer');
-      if (btn.disabled || !isConnected() || !state) return;
+      if (btnMode === 'off' || !isConnected() || !state) return;
+      if (!state.armed) {
+        // Early press (Jeopardy rules): lock out for ¼ second; another early press restarts it.
+        if (btnMode !== 'wait' && btnMode !== 'lockout') return;
+        lockUntil = performance.now() + LOCKOUT_MS;
+        if (navigator.vibrate) navigator.vibrate(30);
+        clearTimeout(lockTimer); lockTimer = setTimeout(render, LOCKOUT_MS + 5);
+        render(); return;
+      }
+      if (btnMode !== 'ready') return; // open, but still inside the lockout
       playSound(me.sound);
       if (navigator.vibrate) navigator.vibrate(80);
       btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 120);
@@ -476,7 +514,13 @@
           if (hostOnline && !wasOnline) sendJoin(true); // host (re)appeared: say hello so it shows us online
         }
         else if (topic === T + '/state') {
+          const wasArmed = !!(state && state.armed);
           state = msg && msg.t === 'state' ? msg : null;
+          if (state && state.armed && !wasArmed) {
+            // Buzzers just opened: a little flash and buzz so players notice.
+            const b = $('buzzer'); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+            if (navigator.vibrate && !lockedOut()) navigator.vibrate(40);
+          }
           if (state) {
             const inOrder = (state.order || []).some((o) => o.id === me.clientId);
             // Clear the "just buzzed" display once the host has counted it, reset, or locked.
@@ -530,7 +574,7 @@
     if (!hs.code || hs.code.length !== CODE_LEN) hs = { code: randomCode() }; // also replaces old 4-letter rooms
     hs.hostId = hs.hostId || uid();
     hs.players = hs.players || {}; hs.order = hs.order || [];
-    hs.round = hs.round || 1; if (hs.armed === undefined) hs.armed = true;
+    hs.round = hs.round || 1; if (hs.jeopardy === undefined) hs.jeopardy = true; if (hs.armed === undefined) hs.armed = !hs.jeopardy;
     let rc = null, T = ''; // room key + channel, set once derived below
     const lastSeen = new Map(); // player id -> time of last message
     const clients = [];
@@ -564,8 +608,11 @@
         ol.appendChild(li);
       });
       $('order-empty').classList.toggle('hidden', hs.order.length > 0);
-      $('order-empty').textContent = hs.armed ? 'Waiting for someone to buzz…' : 'Buzzers are locked.';
-      $('lock-btn').textContent = hs.armed ? 'Lock buzzers' : 'Unlock buzzers';
+      $('order-empty').textContent = hs.armed ? 'Buzzers are open. Waiting for someone to buzz…' : 'Buzzers are locked. Press space to open them.';
+      $('lock-btn').textContent = hs.armed ? 'Lock buzzers (space)' : 'Open buzzers (space)';
+      $('lock-btn').classList.toggle('open-now', !hs.armed);
+      $('lock-btn').classList.toggle('lock-now', hs.armed && hs.jeopardy && !hs.order.length);
+      $('jeopardy').checked = hs.jeopardy;
     }
     function renderPlayers() {
       const ul = $('players'); ul.innerHTML = '';
@@ -592,7 +639,7 @@
     const renderAll = () => { renderOrder(); renderPlayers(); };
 
     const stateMsg = () => ({
-      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed,
+      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy,
       order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })),
       players: Object.keys(hs.players),
     });
@@ -602,7 +649,8 @@
     const broadcast = () => publishAll(T + '/state', stateMsg(), { qos: 1, retain: true });
     const changed = () => { save(); renderAll(); broadcast(); };
 
-    function reset() { hs.order = []; hs.armed = true; hs.round++; changed(); }
+    // New question: clear the order. With Jeopardy rules the buzzers stay locked until the host opens them.
+    function reset() { hs.order = []; hs.armed = !hs.jeopardy; hs.round++; changed(); }
     function toggleLock() { hs.armed = !hs.armed; changed(); }
     function kick(id) {
       publishAll(T + '/p/' + id, { t: 'kicked' }, { qos: 1 });
@@ -666,10 +714,13 @@
 
     $('reset-btn').onclick = reset;
     $('lock-btn').onclick = toggleLock;
+    $('jeopardy').onchange = () => { hs.jeopardy = $('jeopardy').checked; changed(); };
+    // Let go of focus after clicking, so the space bar doesn't also "click" the last button pressed.
+    for (const b of document.querySelectorAll('#view-host button, #view-host input')) b.addEventListener('click', () => setTimeout(() => b.blur(), 0));
     document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT') return;
-      if (e.code === 'Space') { e.preventDefault(); reset(); }
-      if (e.key === 'l' || e.key === 'L') toggleLock();
+      if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.repeat) return;
+      if (e.code === 'Space') { e.preventDefault(); toggleLock(); }
+      if (e.key === 'n' || e.key === 'N') reset();
     });
     $('copy-link').onclick = async () => {
       try { await navigator.clipboard.writeText(joinUrl()); $('copy-link').textContent = 'Copied!'; }

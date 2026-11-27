@@ -10,7 +10,11 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
 
 1. **Host:** open the site on a laptop or TV and click **Host a game**. You get an 8-letter room code (shown as `ABCD-EFGH`), a join link and a QR code. Keep this tab open: it runs the game.
 2. **Players:** scan the QR code, or go to the site and type the room code. Enter a name, choose a sound and tap **Let's play**.
-3. Play! The host presses **Reset buzzers** (or the space bar) between questions. **L** locks or unlocks the buzzers.
+3. Play, Jeopardy style:
+   - **New question** (or **N**) clears the buzz order. The buzzers start **locked** while you read.
+   - **Open buzzers** (or the **space bar**) unlocks them when you finish reading. Players' buzzers flash and vibrate. Pressing space again locks them.
+   - **Buzz too early** and your buzzer locks for **¼ second**, like the real show. Each early press restarts the lockout. Players see a grey **WAIT** button while locked and **LOCKED** during the lockout.
+   - Turn off **Jeopardy rules** on the host screen for a plain buzzer: new questions open straight away and there's no lockout.
 
 If the host refreshes the page, the room keeps the same code and players reconnect on their own.
 
