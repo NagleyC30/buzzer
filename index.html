@@ -36,7 +36,7 @@
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
   .stack > * + * { margin-top: 16px; }
   label { display: block; font-weight: 600; margin-bottom: 6px; }
-  input, select {
+  input, select, textarea {
     width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px;
     border: 1px solid var(--line); background: var(--bg); color: var(--text);
   }
@@ -111,6 +111,39 @@
   #lock-btn.open-now { background: var(--ok); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
   #lock-btn.lock-now { background: var(--accent); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
   .flash { animation: flash .5s ease-out; }
+
+  /* ---------- Final Jeopardy ---------- */
+  textarea { resize: vertical; line-height: 1.4; }
+  .masked { filter: blur(6px); }
+  .fj-board { background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 16px; padding: 28px 20px; text-align: center; }
+  .fj-label { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; opacity: .75; }
+  .fj-cat { font-size: clamp(22px, 4vw, 40px); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; overflow-wrap: anywhere; }
+  .fj-clue { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 3.4vw, 42px); line-height: 1.3; margin-top: 20px; text-transform: uppercase; overflow-wrap: anywhere; }
+  .fj-timer { font-size: clamp(40px, 8vw, 96px); font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 16px; color: #ffd54a; line-height: 1; }
+  .fj-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.2); overflow: hidden; margin-top: 12px; }
+  .fj-bar > div { height: 100%; width: 100%; background: #ffd54a; transition: width .25s linear; }
+  .fj-note { margin-top: 14px; opacity: .85; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); }
+  .chip.done { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  ol.fj-reveal { list-style: none; margin: 16px 0 0; padding: 0; }
+  ol.fj-reveal li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  ol.fj-reveal li + li { margin-top: 8px; }
+  ol.fj-reveal .who { min-width: 140px; }
+  ol.fj-reveal .who strong { display: block; font-size: 20px; overflow-wrap: anywhere; }
+  ol.fj-reveal .ans { flex: 1; min-width: 180px; font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+  ol.fj-reveal .ans.none { color: var(--muted); font-weight: 500; font-style: italic; }
+  ol.fj-reveal .res { font-size: 18px; font-weight: 700; }
+  ol.fj-reveal li.right { border-color: var(--ok); }
+  ol.fj-reveal li.wrong { border-color: var(--accent); }
+  ol.fj-reveal button { padding: 8px 14px; }
+  .btn-ok { background: var(--ok); color: #fff; }
+  .btn-bad { background: var(--accent); color: #fff; }
+  #fj-player { width: 100%; max-width: 520px; margin: 16px auto 0; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  #fj-player .fj-board { padding: 20px 16px; }
+  #fj-player .fj-clue { font-size: 22px; }
+  #fj-player .fj-timer { font-size: 56px; }
+  .fj-msg { text-align: center; font-size: 18px; font-weight: 600; }
   @keyframes flash { from { box-shadow: 0 0 0 6px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
 </style>
 </head>
@@ -162,6 +195,29 @@
       <div id="status">Connecting…</div>
       <div id="status-sub"></div>
     </div>
+    <div id="fj-player" class="hidden">
+      <div class="fj-board">
+        <div class="fj-label">Final Jeopardy</div>
+        <div id="fjp-category" class="fj-cat"></div>
+        <div id="fjp-clue" class="fj-clue hidden"></div>
+        <div id="fjp-timer-wrap" class="hidden"><div id="fjp-timer" class="fj-timer">30</div><div class="fj-bar"><div id="fjp-bar"></div></div></div>
+      </div>
+      <form id="fjp-bet-form" class="card stack hidden" novalidate>
+        <div><label for="fjp-score">Your current score</label><input id="fjp-score" type="number" inputmode="numeric" step="1" placeholder="e.g. 4200"></div>
+        <div><label for="fjp-bet">Your bet (0 up to your score)</label><input id="fjp-bet" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 2000"></div>
+        <div id="fjp-bet-err" class="err hidden"></div>
+        <button class="big" type="submit">Lock in bet</button>
+      </form>
+      <div id="fjp-bet-done" class="card row hidden">
+        <div class="grow">Your bet: <strong id="fjp-bet-val"></strong><div class="muted" id="fjp-bet-note"></div></div>
+        <button id="fjp-bet-change" class="secondary" type="button">Change</button>
+      </div>
+      <div id="fjp-answer-wrap" class="card stack hidden">
+        <div><label for="fjp-answer">Your answer</label><textarea id="fjp-answer" rows="2" maxlength="120" autocomplete="off" placeholder="What is…"></textarea></div>
+        <div class="muted" id="fjp-answer-note">Saved as you type. It locks when time runs out.</div>
+      </div>
+      <div id="fjp-msg" class="fj-msg"></div>
+    </div>
     <button id="leave-btn" class="secondary">Leave game</button>
   </div>
 </section>
@@ -183,7 +239,7 @@
       <div id="qr"></div>
     </div>
   </div>
-  <div class="host-grid">
+  <div class="host-grid" id="host-main">
     <div class="card">
       <h2>Buzz order</h2>
       <ol id="order" class="order"></ol>
@@ -191,6 +247,9 @@
       <div class="host-actions">
         <button id="reset-btn" class="secondary">New question (N)</button>
         <button id="lock-btn" class="secondary">Open buzzers (space)</button>
+      </div>
+      <div class="host-actions">
+        <button id="fj-open" class="secondary">🏆 Final Jeopardy</button>
       </div>
     </div>
     <div class="card">
@@ -206,6 +265,45 @@
       </div>
       <div class="host-actions">
         <button id="new-room" class="secondary">New room</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="fj-host" class="card hidden">
+    <div id="fj-setup" class="stack">
+      <h2>Final Jeopardy setup</h2>
+      <p class="muted" style="margin:0">Type these before players can see this screen. The clue stays blurred while you type.</p>
+      <div><label for="fj-cat-in">Category</label><input id="fj-cat-in" maxlength="80" autocomplete="off" placeholder="e.g. World Capitals"></div>
+      <div>
+        <label for="fj-clue-in">Clue</label>
+        <textarea id="fj-clue-in" rows="3" maxlength="400" autocomplete="off" class="masked"></textarea>
+        <label class="row" style="font-weight:500; margin-top:8px"><input type="checkbox" id="fj-show-clue" style="width:auto"> Show clue while typing</label>
+      </div>
+      <div id="fj-setup-err" class="err hidden"></div>
+      <div class="host-actions">
+        <button id="fj-go" class="btn-ok">Show category &amp; take bets</button>
+        <button id="fj-cancel" class="secondary">Cancel</button>
+      </div>
+    </div>
+    <div id="fj-live" class="hidden">
+      <div class="fj-board">
+        <div class="fj-label">Final Jeopardy</div>
+        <div id="fjh-category" class="fj-cat"></div>
+        <div id="fjh-clue" class="fj-clue hidden"></div>
+        <div id="fjh-timer-wrap" class="hidden"><div id="fjh-timer" class="fj-timer">30</div><div class="fj-bar"><div id="fjh-bar"></div></div></div>
+        <div id="fjh-note" class="fj-note"></div>
+      </div>
+      <h2 id="fjh-chips-title" style="margin-top:20px"></h2>
+      <div id="fjh-chips" class="chips"></div>
+      <ol id="fjh-reveal" class="fj-reveal hidden"></ol>
+      <div class="host-actions">
+        <button id="fjh-start" class="btn-ok">Reveal clue &amp; start 30 seconds</button>
+        <button id="fjh-edit" class="secondary">Edit category / clue</button>
+        <button id="fjh-skip" class="secondary">End timer now</button>
+      </div>
+      <div class="host-actions" style="align-items:center">
+        <label class="row" style="font-weight:500; margin:0; flex:1"><input type="checkbox" id="fj-music" checked style="width:auto"> Play thinking music</label>
+        <button id="fjh-exit" class="secondary">Finish Final Jeopardy</button>
       </div>
     </div>
   </div>
@@ -357,6 +455,42 @@
     { id: 'robot',   name: 'Robot',          play: () => { [300, 200, 400, 250].forEach((f, i) => tone(f, i * .09, .09, 'square', .2)); } },
     { id: 'whistle', name: 'Slide whistle',  play: () => tone(500, 0, .6, 'sine', .35, 2000) },
   ];
+  // Original 30-second "thinking" tune for Final Jeopardy (composed here, not the TV theme):
+  // a ticking clock over a D–Bm–G–A progression, ending with a "time's up" sting.
+  function playThinkMusic(seconds) {
+    const a = audio(), out = a.createGain();
+    out.gain.value = 0.9; out.connect(a.destination);
+    const BEATS = 56, beat = seconds / BEATS, t0 = a.currentTime + 0.05;
+    const note = (midi, at, dur, type, vol) => {
+      const o = a.createOscillator(), g = a.createGain(), t = t0 + at * beat;
+      o.type = type; o.frequency.value = 440 * 2 ** ((midi - 69) / 12);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.05, dur * beat * 0.95));
+      o.connect(g).connect(out); o.start(t); o.stop(t + dur * beat + 0.05);
+    };
+    const chords = [[50, [62, 66, 69]], [47, [59, 62, 66]], [43, [59, 62, 67]], [45, [61, 64, 69]]];
+    const phrase = [ // [beat, midi, length] over 4 bars
+      [0, 74, 1], [1, 78, 1], [2, 76, .5], [2.5, 74, .5], [3, 71, 1], [4, 73, 1], [5, 74, 1], [6, 78, 2],
+      [8, 79, 1], [9, 78, .5], [9.5, 76, .5], [10, 74, 1], [11, 71, 1], [12, 73, 1], [13, 76, 1], [14, 73, 1], [15, 69, 1]];
+    for (let bar = 0; bar < 14; bar++) {
+      const [root, tones] = bar >= 12 ? chords[0] : chords[bar % 4];
+      for (let b = 0; b < 4; b++) {
+        const at = bar * 4 + b;
+        note(root, at, 0.9, 'triangle', 0.22);               // bass
+        note(100, at, 0.06, 'sine', 0.05);                  // clock tick
+        note(tones[b % 3] + 12, at, 0.45, 'sine', 0.06);    // arpeggio
+        note(tones[(b + 1) % 3] + 12, at + 0.5, 0.45, 'sine', 0.05);
+      }
+    }
+    for (const rep of [0, 16, 32]) for (const [b, m, d] of phrase) note(m, rep + b, d * 0.9, 'triangle', 0.2);
+    for (const [b, m, d] of [[48, 74, 2], [50, 78, 2], [52, 81, 3.5]]) note(m, b, d, 'triangle', 0.2);
+    note(81, BEATS, 0.6, 'square', 0.1); note(74, BEATS + 0.6, 2, 'square', 0.1); // time's up
+    return () => { try { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.05); setTimeout(() => out.disconnect(), 600); } catch {} };
+  }
+  const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString();
+  const FJ_MS = 30000, FJ_GRACE_MS = 1500;
+
   const soundById = (id) => SOUNDS.find((s) => s.id === id) || SOUNDS[0];
   function playSound(id) { try { soundById(id).play(); } catch (e) { console.warn(e); } }
 
@@ -432,8 +566,90 @@
       send({ t: 'join', name: me.name, sound: me.sound });
     }
 
+    // ---- Final Jeopardy (player side)
+    let fjEnd = 0, fjMine = store.get('buzzer-fj') || {}, fjLastSend = 0, fjAnswerTimer = null;
+    const fjSave = () => store.set('buzzer-fj', fjMine);
+    function fjFor(fj) { if (fjMine.id !== fj.id) { fjMine = { id: fj.id }; fjSave(); $('fjp-answer').value = ''; $('fjp-score').value = ''; $('fjp-bet').value = ''; } return fjMine; }
+    const fjTimeLeft = () => Math.max(0, fjEnd - Date.now());
+    function fjSendAnswer() { if (state && state.fj) { fjLastSend = Date.now(); send({ t: 'fj-answer', fj: state.fj.id, answer: fjMine.answer || '' }); } }
+    function renderFj(fj) {
+      const mine = fjFor(fj), me_ = me.clientId;
+      const betIn = (fj.betIn || []).includes(me_), answered = (fj.answered || []).includes(me_);
+      const rev = (fj.revealed || {})[me_];
+      $('fjp-category').textContent = fj.category;
+      $('fjp-clue').textContent = fj.clue || ''; $('fjp-clue').classList.toggle('hidden', !fj.clue);
+      $('fjp-timer-wrap').classList.toggle('hidden', fj.stage !== 'clue');
+      const betting = fj.stage === 'betting';
+      const showForm = betting && (mine.editing || mine.bet == null);
+      $('fjp-bet-form').classList.toggle('hidden', !showForm);
+      $('fjp-bet-done').classList.toggle('hidden', showForm || (!betting && mine.bet == null && !betIn));
+      $('fjp-bet-change').classList.toggle('hidden', !betting);
+      if (!showForm) {
+        $('fjp-bet-val').textContent = mine.bet == null ? 'none (counts as $0)' : money(mine.bet);
+        $('fjp-bet-note').textContent = mine.bet == null ? '' : betting ? (betIn ? `Locked in. Score ${money(mine.score)}.` : 'Sending…') : `Score ${money(mine.score)}`;
+      }
+      // Resend anything the host hasn't acknowledged yet (e.g. after a reconnect).
+      if (betting && mine.bet != null && !mine.editing && !betIn && Date.now() - fjLastSend > 3000) { fjLastSend = Date.now(); send({ t: 'fj-bet', fj: fj.id, score: mine.score, bet: mine.bet }); }
+      const ansOn = fj.stage === 'clue' || fj.stage === 'reveal';
+      $('fjp-answer-wrap').classList.toggle('hidden', !ansOn);
+      const open = fj.stage === 'clue' && fjTimeLeft() > 0;
+      $('fjp-answer').readOnly = !open;
+      if (document.activeElement !== $('fjp-answer')) $('fjp-answer').value = mine.answer || '';
+      $('fjp-answer-note').textContent = open ? 'Saved as you type. It locks when time runs out.' : 'Answers are locked.';
+      if (open && mine.answer && !answered && Date.now() - fjLastSend > 3000) fjSendAnswer();
+      let msg = '';
+      if (betting) msg = mine.bet != null && !mine.editing ? 'Waiting for the host to reveal the clue…' : '';
+      else if (fj.stage === 'clue') msg = open ? '' : 'Time\'s up!';
+      else if (rev && rev.correct !== undefined) msg = (rev.correct ? `✅ Correct! +${money(rev.bet)}` : `❌ Not quite. −${money(rev.bet)}`) + (rev.score != null ? ` → ${money(rev.score + (rev.correct ? rev.bet : -rev.bet))}` : '');
+      else msg = 'Time\'s up! Watch the screen for the reveal.';
+      $('fjp-msg').textContent = msg;
+      renderFjTimer();
+    }
+    function renderFjTimer() {
+      if (!state || !state.fj || state.fj.stage !== 'clue') return;
+      const left = fjTimeLeft();
+      $('fjp-timer').textContent = Math.ceil(left / 1000);
+      $('fjp-bar').style.width = (100 * left / FJ_MS) + '%';
+    }
+    setInterval(() => {
+      if (!state || !state.fj || state.fj.stage !== 'clue') return;
+      const wasOpen = !$('fjp-answer').readOnly;
+      renderFjTimer();
+      if (wasOpen && fjTimeLeft() <= 0) { fjSendAnswer(); render(); } // final save at the buzzer
+    }, 250);
+    $('fjp-bet-form').onsubmit = (e) => {
+      e.preventDefault();
+      const err = (m) => { $('fjp-bet-err').textContent = m; $('fjp-bet-err').classList.remove('hidden'); };
+      const sv = $('fjp-score').value.trim(), bv = $('fjp-bet').value.trim();
+      const score = Math.round(Number(sv)), bet = Math.round(Number(bv));
+      if (sv === '' || !isFinite(score)) return err('Enter your current score.');
+      if (bv === '' || !isFinite(bet) || bet < 0) return err('Enter a bet of $0 or more.');
+      const max = Math.max(0, score);
+      if (bet > max) return err(score > 0 ? `You can bet at most ${money(max)} (your score).` : 'With a score of $0 or less, you can only bet $0.');
+      $('fjp-bet-err').classList.add('hidden');
+      Object.assign(fjMine, { score, bet, editing: false }); fjSave();
+      fjLastSend = Date.now(); send({ t: 'fj-bet', fj: state.fj.id, score, bet });
+      document.activeElement && document.activeElement.blur();
+      render();
+    };
+    $('fjp-bet-change').onclick = () => {
+      fjMine.editing = true; fjSave();
+      $('fjp-score').value = fjMine.score ?? ''; $('fjp-bet').value = fjMine.bet ?? '';
+      render();
+    };
+    $('fjp-answer').addEventListener('input', () => {
+      if ($('fjp-answer').readOnly) return;
+      fjMine.answer = $('fjp-answer').value.slice(0, 120); fjSave();
+      clearTimeout(fjAnswerTimer); fjAnswerTimer = setTimeout(fjSendAnswer, 400);
+    });
+
     function render() {
       const btn = $('buzzer'), st = $('status'), sub = $('status-sub');
+      // Final Jeopardy takes over the screen while it's running.
+      const fj = !kicked && isConnected() && hostOnline !== false && state && state.fj && joined() ? state.fj : null;
+      $('fj-player').classList.toggle('hidden', !fj);
+      document.querySelector('#view-player .buzzer-area').classList.toggle('hidden', !!fj);
+      if (fj) { $('conn-dot').classList.add('on'); $('conn-text').textContent = 'Connected'; renderFj(fj); return; }
       const order = (state && state.order) || [];
       const pos = order.findIndex((o) => o.id === me.clientId);
       const setPill = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
@@ -493,7 +709,10 @@
       send({ t: 'buzz', round: state.round });
     }
     $('buzzer').addEventListener('pointerdown', buzz);
-    document.addEventListener('keydown', (e) => { if ((e.code === 'Space' || e.code === 'Enter') && !$('view-player').classList.contains('hidden')) buzz(e); });
+    document.addEventListener('keydown', (e) => {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // typing a bet or answer
+      if ((e.code === 'Space' || e.code === 'Enter') && !$('view-player').classList.contains('hidden')) buzz(e);
+    });
 
     function connect() {
       if (left || kicked) return;
@@ -521,6 +740,7 @@
             const b = $('buzzer'); b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
             if (navigator.vibrate && !lockedOut()) navigator.vibrate(40);
           }
+          if (state && state.fj && state.fj.stage === 'clue') fjEnd = Date.now() + (state.fj.remaining || 0);
           if (state) {
             const inOrder = (state.order || []).some((o) => o.id === me.clientId);
             // Clear the "just buzzed" display once the host has counted it, reset, or locked.
@@ -636,10 +856,141 @@
       if (up) { el.textContent = '● Room is open. Keep this screen on.'; el.style.color = 'var(--ok)'; }
       else { el.textContent = 'Connecting… (check this device\'s internet)'; el.style.color = ''; }
     }
-    const renderAll = () => { renderOrder(); renderPlayers(); };
+    const renderAll = () => { renderOrder(); renderPlayers(); renderFj(); };
+
+    // ---- Final Jeopardy (host side)
+    // hs.fj = { id, stage: 'betting' | 'clue' | 'reveal', category, clue, endsAt,
+    //           bets: {id: {score, bet}}, answers: {id: text}, reveal: {id: {shown, correct}} }
+    let fjEditing = false, stopMusic = null, lastFjBroadcast = 0;
+    function fjPublic() {
+      const f = hs.fj; if (!f) return null;
+      const revealed = {};
+      for (const [id, r] of Object.entries(f.reveal || {})) {
+        if (!r.shown) continue;
+        const b = f.bets[id];
+        revealed[id] = { answer: f.answers[id] || '' };
+        if (r.correct !== undefined) Object.assign(revealed[id], { correct: r.correct, bet: b ? b.bet : 0, score: b ? b.score : null });
+      }
+      return {
+        id: f.id, stage: f.stage, category: f.category,
+        clue: f.stage === 'betting' ? '' : f.clue, // the clue never leaves this screen before it's revealed
+        remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0,
+        betIn: Object.keys(f.bets), answered: Object.keys(f.answers).filter((id) => f.answers[id].trim()), revealed,
+      };
+    }
+    const fjPlayers = () => Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
+    function renderFj() {
+      const f = hs.fj, on = !!f || fjEditing;
+      $('host-main').classList.toggle('hidden', on);
+      $('fj-host').classList.toggle('hidden', !on);
+      if (!on) return;
+      const editing = fjEditing || !f;
+      $('fj-setup').classList.toggle('hidden', !editing);
+      $('fj-live').classList.toggle('hidden', editing);
+      if (editing) return;
+      $('fjh-category').textContent = f.category;
+      $('fjh-clue').textContent = f.clue; $('fjh-clue').classList.toggle('hidden', f.stage === 'betting');
+      $('fjh-timer-wrap').classList.toggle('hidden', f.stage !== 'clue');
+      $('fjh-note').textContent = f.stage === 'betting' ? 'Players: place your bets on your phones.' : f.stage === 'reveal' ? 'Time\'s up!' : '';
+      $('fjh-start').classList.toggle('hidden', f.stage !== 'betting');
+      $('fjh-edit').classList.toggle('hidden', f.stage !== 'betting');
+      $('fjh-skip').classList.toggle('hidden', f.stage !== 'clue');
+      // Who's in (amounts and answers stay hidden until the reveal).
+      const list = fjPlayers();
+      const chipsOn = f.stage !== 'reveal';
+      $('fjh-chips').classList.toggle('hidden', !chipsOn); $('fjh-chips-title').classList.toggle('hidden', !chipsOn);
+      if (chipsOn) {
+        const done = (id) => (f.stage === 'betting' ? !!f.bets[id] : !!(f.answers[id] || '').trim());
+        $('fjh-chips-title').textContent = `${f.stage === 'betting' ? 'Bets locked in' : 'Answers in'}: ${list.filter((p) => done(p.id)).length} of ${list.length}`;
+        $('fjh-chips').innerHTML = '';
+        for (const p of list) { const c = document.createElement('span'); c.className = 'chip' + (done(p.id) ? ' done' : ''); c.textContent = (done(p.id) ? '✓ ' : '… ') + p.name; $('fjh-chips').appendChild(c); }
+      }
+      renderFjReveal();
+      renderFjTimer();
+    }
+    function renderFjReveal() {
+      const f = hs.fj, ol = $('fjh-reveal');
+      ol.classList.toggle('hidden', f.stage !== 'reveal');
+      if (f.stage !== 'reveal') return;
+      ol.innerHTML = '';
+      // Lowest score first, like the show.
+      const list = fjPlayers().sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
+      for (const p of list) {
+        const b = f.bets[p.id], r = f.reveal[p.id] || {}, ans = (f.answers[p.id] || '').trim();
+        const li = document.createElement('li');
+        if (r.correct === true) li.className = 'right'; if (r.correct === false) li.className = 'wrong';
+        li.innerHTML = '<div class="who"><strong></strong><span class="muted"></span></div><div class="ans"></div><div class="res"></div>';
+        li.querySelector('strong').textContent = p.name;
+        li.querySelector('.who .muted').textContent = b ? `Score ${money(b.score)}` : 'No bet';
+        const ansEl = li.querySelector('.ans'), res = li.querySelector('.res');
+        const btn = (label, cls, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = cls; x.onclick = () => { fn(); x.blur(); }; return x; };
+        if (!r.shown) {
+          ansEl.appendChild(btn('Reveal answer', '', () => { f.reveal[p.id] = { shown: true }; changed(); }));
+        } else {
+          ansEl.textContent = ans || '(no answer)'; if (!ans) ansEl.classList.add('none');
+          if (r.correct === undefined) {
+            res.append(btn('✓ Right', 'btn-ok', () => { r.correct = true; changed(); }), ' ', btn('✗ Wrong', 'btn-bad', () => { r.correct = false; changed(); }));
+          } else {
+            const bet = b ? b.bet : 0;
+            res.textContent = `${r.correct ? '+' : '−'}${money(bet)}` + (b ? ` → ${money(b.score + (r.correct ? bet : -bet))}` : '') + ' ';
+            res.appendChild(btn('Undo', 'secondary', () => { delete r.correct; changed(); }));
+          }
+        }
+        ol.appendChild(li);
+      }
+    }
+    function renderFjTimer() {
+      const f = hs.fj; if (!f || f.stage !== 'clue') return;
+      const left = Math.max(0, f.endsAt - Date.now());
+      $('fjh-timer').textContent = Math.ceil(left / 1000);
+      $('fjh-bar').style.width = (100 * left / FJ_MS) + '%';
+    }
+    function fjEndTimer() {
+      if (!hs.fj || hs.fj.stage !== 'clue') return;
+      hs.fj.stage = 'reveal'; hs.fj.endsAt = Math.min(hs.fj.endsAt, Date.now()); changed();
+    }
+    setInterval(() => {
+      const f = hs.fj; if (!f || f.stage !== 'clue') return;
+      renderFjTimer();
+      // Small grace period so answers typed in the last instant still arrive.
+      if (Date.now() >= f.endsAt + FJ_GRACE_MS) fjEndTimer();
+      else if (Date.now() - lastFjBroadcast > 5000) { lastFjBroadcast = Date.now(); broadcast(); } // keeps late joiners' clocks right
+    }, 250);
+    function fjFillSetup() {
+      $('fj-cat-in').value = hs.fj ? hs.fj.category : (hs.fjDraft || {}).category || '';
+      $('fj-clue-in').value = hs.fj ? hs.fj.clue : (hs.fjDraft || {}).clue || '';
+      $('fj-show-clue').checked = false; $('fj-clue-in').classList.add('masked');
+      $('fj-setup-err').classList.add('hidden');
+    }
+    $('fj-open').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); $('fj-cat-in').focus(); };
+    $('fj-show-clue').onchange = () => $('fj-clue-in').classList.toggle('masked', !$('fj-show-clue').checked);
+    for (const id of ['fj-cat-in', 'fj-clue-in']) $(id).addEventListener('input', () => { if (!hs.fj) { hs.fjDraft = { category: $('fj-cat-in').value, clue: $('fj-clue-in').value }; save(); } });
+    $('fj-cancel').onclick = () => { fjEditing = false; renderAll(); };
+    $('fj-go').onclick = () => {
+      const category = $('fj-cat-in').value.trim(), clue = $('fj-clue-in').value.trim();
+      if (!category || !clue) { $('fj-setup-err').textContent = 'Enter both a category and a clue.'; $('fj-setup-err').classList.remove('hidden'); return; }
+      if (hs.fj) Object.assign(hs.fj, { category, clue }); // editing during betting keeps the bets
+      else hs.fj = { id: uid(), stage: 'betting', category, clue, endsAt: 0, bets: {}, answers: {}, reveal: {} };
+      delete hs.fjDraft; hs.armed = false; fjEditing = false; changed();
+    };
+    $('fjh-edit').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); };
+    $('fjh-start').onclick = () => {
+      const missing = fjPlayers().filter((p) => !hs.fj.bets[p.id]).length;
+      if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
+      hs.fj.stage = 'clue'; hs.fj.endsAt = Date.now() + FJ_MS; lastFjBroadcast = Date.now(); changed();
+      if (stopMusic) stopMusic();
+      stopMusic = $('fj-music').checked ? playThinkMusic(FJ_MS / 1000) : null;
+    };
+    $('fj-music').onchange = () => { if (!$('fj-music').checked && stopMusic) { stopMusic(); stopMusic = null; } };
+    $('fjh-skip').onclick = () => { if (stopMusic) { stopMusic(); stopMusic = null; } fjEndTimer(); };
+    $('fjh-exit').onclick = () => {
+      if (hs.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+      if (stopMusic) { stopMusic(); stopMusic = null; }
+      hs.fj = null; fjEditing = false; reset();
+    };
 
     const stateMsg = () => ({
-      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy,
+      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy, fj: fjPublic(),
       order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })),
       players: Object.keys(hs.players),
     });
@@ -675,6 +1026,19 @@
         if ($('host-sound').checked) playSound(p.sound);
         changed();
         const li = $('order').lastElementChild; if (li) li.classList.add('flash');
+      } else if (msg.t === 'fj-bet') {
+        const f = hs.fj;
+        if (!f || f.stage !== 'betting' || msg.fj !== f.id || !hs.players[id]) { broadcast(); return; }
+        const score = Math.round(Number(msg.score)), bet = Math.round(Number(msg.bet));
+        if (!isFinite(score) || !isFinite(bet)) return;
+        f.bets[id] = { score, bet: Math.min(Math.max(0, bet), Math.max(0, score)) };
+        changed();
+      } else if (msg.t === 'fj-answer') {
+        const f = hs.fj;
+        // Answers count until the clock runs out (plus a moment for messages in flight).
+        if (!f || f.stage !== 'clue' || msg.fj !== f.id || !hs.players[id] || at > f.endsAt + FJ_GRACE_MS) { broadcast(); return; }
+        f.answers[id] = String(msg.answer || '').slice(0, 120);
+        changed();
       } else if (msg.t === 'hb') {
         if (!hs.players[id]) broadcast(); // unknown player: they'll see they're missing and re-join
         else renderPlayers();
@@ -716,9 +1080,10 @@
     $('lock-btn').onclick = toggleLock;
     $('jeopardy').onchange = () => { hs.jeopardy = $('jeopardy').checked; changed(); };
     // Let go of focus after clicking, so the space bar doesn't also "click" the last button pressed.
-    for (const b of document.querySelectorAll('#view-host button, #view-host input')) b.addEventListener('click', () => setTimeout(() => b.blur(), 0));
+    for (const b of document.querySelectorAll('#view-host button, #view-host input[type=checkbox]')) b.addEventListener('click', () => setTimeout(() => b.blur(), 0));
     document.addEventListener('keydown', (e) => {
-      if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.repeat) return;
+      if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.target.tagName === 'TEXTAREA' || e.repeat) return;
+      if (hs.fj || fjEditing) return; // buzzer shortcuts are off during Final Jeopardy
       if (e.code === 'Space') { e.preventDefault(); toggleLock(); }
       if (e.key === 'n' || e.key === 'N') reset();
     });

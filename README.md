@@ -16,6 +16,16 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
    - **Buzz too early** and your buzzer locks for **¼ second**, like the real show. Each early press restarts the lockout. Players see a grey **WAIT** button while locked and **LOCKED** during the lockout.
    - Turn off **Jeopardy rules** on the host screen for a plain buzzer: new questions open straight away and there's no lockout.
 
+### Final Jeopardy
+
+1. On the host screen, click **🏆 Final Jeopardy** and type the category and clue. Do this before the TV is visible: the clue stays blurred while you type.
+2. **Show category & take bets.** The TV shows only the category. Each player enters their current score and a bet from $0 up to that score. The TV shows who has locked in, not the amounts. Players can change their bet until the clue is revealed.
+3. **Reveal clue & start 30 seconds.** The clue appears on the TV and phones with a countdown and thinking music (an original tune, played from the host screen). Players type their answers, which lock when time runs out.
+4. **Reveal.** Players are listed lowest score first. For each one, click **Reveal answer**, then **✓ Right** or **✗ Wrong**. Their bet and final score appear on the TV and on their phone.
+5. **Finish Final Jeopardy** returns everyone to the buzzer.
+
+The clue isn't sent to phones until you reveal it. Bets and answers stay on the host screen, hidden, until you reveal them.
+
 If the host refreshes the page, the room keeps the same code and players reconnect on their own.
 
 ## Putting it online for free (GitHub Pages)
