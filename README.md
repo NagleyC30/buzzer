@@ -37,7 +37,13 @@ Netlify Drop (drag the folder onto app.netlify.com/drop) or Cloudflare Pages wor
 ### Limitations
 
 - The host's screen needs to stay on during a game. A laptop or tablet plugged in is ideal. If it sleeps, buzzes can't be counted until it wakes.
-- The public servers are shared, best-effort services. Room messages (player names and buzzes) aren't private. Anyone who knew the room code could see them.
+- The public servers are shared, best-effort services. They can be slow or down, which is why there's a backup.
+
+### Privacy
+
+- Every message (names, buzzes, game state) is encrypted in the browser with AES-GCM, using a key derived from the room code. It's never sent in readable form. The servers only see scrambled data on a channel whose name is also derived from the code.
+- Outsiders can't read the game or send fake buzzes, because messages without the room's key are ignored.
+- Limit: a 4-letter code has about 280,000 possibilities. Someone determined could try them all by computer to unscramble a room. This protects against casual snooping, not a targeted attacker. Don't put anything sensitive in player names.
 
 ### Using your own message server (optional)
 

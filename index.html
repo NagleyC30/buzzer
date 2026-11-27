@@ -213,7 +213,43 @@
   const DEFAULT_BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt'];
   const params = new URLSearchParams(location.search);
   const BROKERS = params.get('brokers') ? params.get('brokers').split(',').filter(Boolean) : DEFAULT_BROKERS;
-  const TOPIC = (code) => `gamebuzzer-v2/${code}`;
+  // ---------------------------------------------------------------- privacy
+  // Everything is encrypted in the browser (AES-GCM) with a key made from the room code, and
+  // the channel name on the server is also derived from the code. The public servers, and
+  // anyone listening on them, only see scrambled data, and can't send fake buzzes.
+  const te = new TextEncoder(), td = new TextDecoder();
+  const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  async function roomCrypto(code) {
+    const base = await crypto.subtle.importKey('raw', te.encode('gamebuzzer-v3:' + code), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: te.encode('gamebuzzer-v3/room-key'), iterations: 150000 }, base, 384));
+    const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-GCM', false, ['encrypt', 'decrypt']);
+    const topic = 'gamebuzzer-v3/' + [...bits.slice(32, 48)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const seal = async (obj) => {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, te.encode(JSON.stringify(obj))));
+      const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+      return b64(out);
+    };
+    const open = async (buf) => {
+      const s = buf.toString(); if (!s) return null;
+      try {
+        const raw = unb64(s);
+        const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, key, raw.slice(12));
+        return JSON.parse(td.decode(pt));
+      } catch { return undefined; } // not ours / tampered: ignore
+    };
+    // Encrypting/decrypting is asynchronous; run everything through queues so messages keep their order.
+    let outQ = Promise.resolve(), inQ = Promise.resolve();
+    return {
+      topic, seal,
+      // send(obj, fn): encrypt obj (null = empty, used to clear saved messages) then call fn(payload)
+      send(obj, fn) { outQ = outQ.then(() => (obj === null ? '' : seal(obj))).then(fn).catch((e) => console.warn(e)); },
+      // recv(buf, fn): decrypt then call fn(msg, arrivalTime); undecryptable messages are dropped
+      recv(buf, fn) { const at = Date.now(); inQ = inQ.then(() => open(buf)).then((m) => { if (m !== undefined) fn(m, at); }).catch((e) => console.warn(e)); },
+    };
+  }
   const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // no I, L, O (easy to misread)
   const HEARTBEAT_MS = 10000, OFFLINE_AFTER_MS = 35000;
 
@@ -234,7 +270,6 @@
   const randomCode = () => Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
   const cleanCode = (s) => (s || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   const show = (id) => { for (const v of document.querySelectorAll('section[id^="view-"]')) v.classList.toggle('hidden', v.id !== id); };
-  const parse = (buf) => { try { const s = buf.toString(); return s ? JSON.parse(s) : null; } catch { return null; } };
   const mqttOpts = (extra) => ({ clientId: 'gb_' + uid(), clean: true, keepalive: 20, reconnectPeriod: 2000, connectTimeout: 8000, protocolVersion: 4, ...extra });
 
   // ---------------------------------------------------------------- keep the screen awake
@@ -346,18 +381,18 @@
   }
   function joinError(msg) { $('join-error').textContent = msg; $('join-error').classList.remove('hidden'); }
 
-  function runPlayer(room, me) {
+  async function runPlayer(room, me) {
+    let rc = null, T = ''; // room key + channel, set once derived below
     show('view-player');
     $('me-name').textContent = me.name;
     $('me-room').textContent = room;
-    const T = TOPIC(room);
 
     let client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
     let left = false, kicked = false, hostOnline = null, state = null, lastJoin = 0, pendingBuzz = false; // pendingBuzz: round number of a buzz the host hasn't confirmed yet
 
     const isConnected = () => client && client.connected;
     const joined = () => !!(state && Array.isArray(state.players) && state.players.includes(me.clientId));
-    const send = (msg) => { if (isConnected()) client.publish(T + '/in', JSON.stringify({ ...msg, id: me.clientId }), { qos: 1 }); };
+    const send = (msg) => { const c = client; if (isConnected()) rc.send({ ...msg, id: me.clientId }, (p) => c.publish(T + '/in', p, { qos: 1 })); };
     function sendJoin(force) {
       if (!isConnected() || (!force && Date.now() - lastJoin < 3000)) return;
       lastJoin = Date.now();
@@ -414,7 +449,7 @@
     function connect() {
       if (left || kicked) return;
       const url = BROKERS[brokerIdx % BROKERS.length];
-      const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/in', payload: JSON.stringify({ t: 'offline', id: me.clientId }), qos: 1, retain: false } }));
+      const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/in', payload: willPayload, qos: 1, retain: false } }));
       client = c; lastUp = Date.now(); hostOnline = null; state = null;
       c.on('connect', () => {
         if (c !== client) return;
@@ -422,9 +457,8 @@
         c.subscribe([T + '/state', T + '/host', T + '/p/' + me.clientId], { qos: 1 });
         sendJoin(true); render();
       });
-      c.on('message', (topic, buf) => {
+      c.on('message', (topic, buf) => rc.recv(buf, (msg) => {
         if (c !== client) return;
-        const msg = parse(buf);
         if (topic === T + '/host') {
           const wasOnline = hostOnline;
           hostOnline = msg ? !!msg.online : null;
@@ -442,13 +476,13 @@
           kicked = true; left = true; try { c.end(true); } catch {}
         }
         render();
-      });
+      }));
       c.on('offline', render); c.on('close', render); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
     }
 
     // Switch to the backup server if this one hasn't worked for 10 seconds.
     setInterval(() => {
-      if (left || kicked) return;
+      if (left || kicked || !client) return;
       if (isConnected()) { lastUp = Date.now(); render(); return; }
       if (Date.now() - lastUp > 10000 && BROKERS.length > 1) {
         try { client.end(true); } catch {}
@@ -470,11 +504,15 @@
       setTimeout(() => { try { client && client.end(); } catch {} location.href = location.pathname + (extraParams().toString() ? '?' + extraParams() : ''); }, 300);
     };
 
-    render(); connect();
+    render();
+    // Derive this room's key and channel (takes a moment on older phones), then connect.
+    rc = await roomCrypto(room); T = rc.topic;
+    const willPayload = await rc.seal({ t: 'offline', id: me.clientId });
+    connect();
   }
 
   // ================================================================= HOST
-  function startHost() {
+  async function startHost() {
     show('view-host');
     // Host state survives a refresh or the screen going off: same room code, same players.
     let hs = store.get('buzzer-host') || {};
@@ -482,7 +520,7 @@
     hs.hostId = hs.hostId || uid();
     hs.players = hs.players || {}; hs.order = hs.order || [];
     hs.round = hs.round || 1; if (hs.armed === undefined) hs.armed = true;
-    const T = TOPIC(hs.code);
+    let rc = null, T = ''; // room key + channel, set once derived below
     const lastSeen = new Map(); // player id -> time of last message
     const clients = [];
     const save = () => store.set('buzzer-host', hs);
@@ -547,24 +585,25 @@
     }
     const renderAll = () => { renderOrder(); renderPlayers(); };
 
-    const stateMsg = () => JSON.stringify({
+    const stateMsg = () => ({
       t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed,
       order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })),
       players: Object.keys(hs.players),
     });
-    const hostMsg = (online) => JSON.stringify({ online, hostId: hs.hostId });
-    function publishAll(topic, payload, opts) { for (const c of clients) if (c.connected) c.publish(topic, payload, opts); }
+    const hostMsg = (online) => ({ online, hostId: hs.hostId });
+    function publishAll(topic, obj, opts) { if (rc) rc.send(obj, (p) => { for (const c of clients) if (c.connected) c.publish(topic, p, opts); }); }
+    function publishTo(c, topic, obj, opts) { if (rc) rc.send(obj, (p) => c.publish(topic, p, opts)); }
     const broadcast = () => publishAll(T + '/state', stateMsg(), { qos: 1, retain: true });
     const changed = () => { save(); renderAll(); broadcast(); };
 
     function reset() { hs.order = []; hs.armed = true; hs.round++; changed(); }
     function toggleLock() { hs.armed = !hs.armed; changed(); }
     function kick(id) {
-      publishAll(T + '/p/' + id, JSON.stringify({ t: 'kicked' }), { qos: 1 });
+      publishAll(T + '/p/' + id, { t: 'kicked' }, { qos: 1 });
       delete hs.players[id]; lastSeen.delete(id); hs.order = hs.order.filter((o) => o.id !== id); changed();
     }
 
-    function handle(msg) {
+    function handle(msg, at) {
       if (!msg || typeof msg !== 'object' || typeof msg.id !== 'string') return;
       const id = msg.id.slice(0, 40);
       if (msg.t === 'offline') { lastSeen.delete(id); renderPlayers(); return; }
@@ -578,7 +617,7 @@
         const p = hs.players[id];
         // Ignore buzzes from before the last reset, while locked, or repeats.
         if (!p || !hs.armed || msg.round !== hs.round || hs.order.some((o) => o.id === id)) { broadcast(); return; }
-        hs.order.push({ id, name: p.name, at: Date.now() });
+        hs.order.push({ id, name: p.name, at });
         if ($('host-sound').checked) playSound(p.sound);
         changed();
         const li = $('order').lastElementChild; if (li) li.classList.add('flash');
@@ -590,21 +629,20 @@
 
     function connectAll() {
       for (const url of BROKERS) {
-        const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/host', payload: hostMsg(false), qos: 1, retain: true } }));
+        const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/host', payload: willPayload, qos: 1, retain: true } }));
         c.on('connect', () => {
           c.subscribe([T + '/in', T + '/host'], { qos: 1 });
-          c.publish(T + '/host', hostMsg(true), { qos: 1, retain: true });
-          c.publish(T + '/state', stateMsg(), { qos: 1, retain: true });
+          publishTo(c, T + '/host', hostMsg(true), { qos: 1, retain: true });
+          publishTo(c, T + '/state', stateMsg(), { qos: 1, retain: true });
           renderConn();
         });
-        c.on('message', (topic, buf) => {
-          const msg = parse(buf);
-          if (topic === T + '/in') handle(msg);
+        c.on('message', (topic, buf) => rc.recv(buf, (msg, at) => {
+          if (topic === T + '/in') handle(msg, at);
           // Someone else is hosting this code (very unlikely): move to a new room.
           else if (topic === T + '/host' && msg && msg.online && msg.hostId !== hs.hostId) newRoom(true);
           // A stale "offline" from our own previous visit: correct it.
-          else if (topic === T + '/host' && msg && !msg.online && msg.hostId === hs.hostId) c.publish(T + '/host', hostMsg(true), { qos: 1, retain: true });
-        });
+          else if (topic === T + '/host' && msg && !msg.online && msg.hostId === hs.hostId) publishTo(c, T + '/host', hostMsg(true), { qos: 1, retain: true });
+        }));
         c.on('offline', renderConn); c.on('close', renderConn); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
         clients.push(c);
       }
@@ -612,10 +650,10 @@
 
     function newRoom(silent) {
       if (!silent && !confirm('Start a new room? Everyone will need to join again with the new code.')) return;
-      for (const id of Object.keys(hs.players)) publishAll(T + '/p/' + id, JSON.stringify({ t: 'kicked' }), { qos: 1 });
+      for (const id of Object.keys(hs.players)) publishAll(T + '/p/' + id, { t: 'kicked' }, { qos: 1 });
       // Clear this room's saved messages from the servers.
-      publishAll(T + '/state', '', { qos: 1, retain: true });
-      publishAll(T + '/host', '', { qos: 1, retain: true });
+      publishAll(T + '/state', null, { qos: 1, retain: true });
+      publishAll(T + '/host', null, { qos: 1, retain: true });
       store.del('buzzer-host');
       setTimeout(() => location.reload(), 400);
     }
@@ -640,10 +678,17 @@
     });
     setInterval(renderPlayers, 5000);
 
-    renderHead(); renderAll(); renderConn(); connectAll();
+    renderHead(); renderAll(); renderConn();
+    rc = await roomCrypto(hs.code); T = rc.topic;
+    const willPayload = await rc.seal(hostMsg(false));
+    connectAll();
   }
 
   // ================================================================= boot
+  if (!window.crypto || !crypto.subtle) {
+    document.body.innerHTML = '<div class="wrap"><h1>Can\'t start</h1><p>This page needs a secure (https) connection. Open it from its https:// address.</p></div>';
+    return;
+  }
   if (typeof mqtt === 'undefined') {
     document.body.innerHTML = '<div class="wrap"><h1>Couldn\'t load</h1><p>The connection library failed to load. Check your internet connection and refresh.</p></div>';
     return;
