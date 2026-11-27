@@ -20,11 +20,11 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
 
 1. On the host screen, click **🏆 Final Jeopardy** and type the category and clue. Do this before the TV is visible: the clue stays blurred while you type.
 2. **Show category & take bets.** The TV shows only the category. Each player enters their current score and a bet from $0 up to that score. The TV shows who has locked in, not the amounts. Players can change their bet until the clue is revealed.
-3. **Reveal clue & start 30 seconds.** The clue appears on the TV and phones with a countdown and thinking music (an original tune, played from the host screen). Players type their answers, which lock when time runs out.
+3. **Reveal clue & start 32 seconds.** The clue appears on the TV and phones with a countdown and thinking music (an original tune, played from the host screen). Players type their answers, which lock when time runs out.
 4. **Reveal.** Players are listed lowest score first. For each one, click **Reveal answer**, then **✓ Right** or **✗ Wrong**. Their bet and final score appear on the TV and on their phone.
 5. **Finish Final Jeopardy** returns everyone to the buzzer.
 
-**Using your own music:** under the Final Jeopardy controls, click **Choose music file…** and pick an audio file on the host device (MP3, M4A, WAV and so on, up to 40 MB). It starts with the 30-second clock and fades out when time is up. **▶ Preview** lets you check it first. The file is saved in that browser for next time and is never uploaded anywhere. **Use built-in tune** switches back. The site doesn't include the TV show's theme because it's copyrighted; use a copy you own.
+**Using your own music:** under the Final Jeopardy controls, click **Choose music file…** and pick an audio file on the host device (MP3, M4A, WAV and so on, up to 40 MB). It starts with the 32-second clock and fades out when time is up. **▶ Preview** lets you check it first. The file is saved in that browser for next time and is never uploaded anywhere. **Use built-in tune** switches back. The site doesn't include the TV show's theme because it's copyrighted; use a copy you own.
 
 The clue isn't sent to phones until you reveal it. Bets and answers stay on the host screen, hidden, until you reveal them.
 

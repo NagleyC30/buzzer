@@ -203,7 +203,7 @@
         <div class="fj-label">Final Jeopardy</div>
         <div id="fjp-category" class="fj-cat"></div>
         <div id="fjp-clue" class="fj-clue hidden"></div>
-        <div id="fjp-timer-wrap" class="hidden"><div id="fjp-timer" class="fj-timer">30</div><div class="fj-bar"><div id="fjp-bar"></div></div></div>
+        <div id="fjp-timer-wrap" class="hidden"><div id="fjp-timer" class="fj-timer">32</div><div class="fj-bar"><div id="fjp-bar"></div></div></div>
       </div>
       <form id="fjp-bet-form" class="card stack hidden" novalidate>
         <div><label for="fjp-score">Your current score</label><input id="fjp-score" type="number" inputmode="numeric" step="1" placeholder="e.g. 4200"></div>
@@ -293,14 +293,14 @@
         <div class="fj-label">Final Jeopardy</div>
         <div id="fjh-category" class="fj-cat"></div>
         <div id="fjh-clue" class="fj-clue hidden"></div>
-        <div id="fjh-timer-wrap" class="hidden"><div id="fjh-timer" class="fj-timer">30</div><div class="fj-bar"><div id="fjh-bar"></div></div></div>
+        <div id="fjh-timer-wrap" class="hidden"><div id="fjh-timer" class="fj-timer">32</div><div class="fj-bar"><div id="fjh-bar"></div></div></div>
         <div id="fjh-note" class="fj-note"></div>
       </div>
       <h2 id="fjh-chips-title" style="margin-top:20px"></h2>
       <div id="fjh-chips" class="chips"></div>
       <ol id="fjh-reveal" class="fj-reveal hidden"></ol>
       <div class="host-actions">
-        <button id="fjh-start" class="btn-ok">Reveal clue &amp; start 30 seconds</button>
+        <button id="fjh-start" class="btn-ok">Reveal clue &amp; start 32 seconds</button>
         <button id="fjh-edit" class="secondary">Edit category / clue</button>
         <button id="fjh-skip" class="secondary">End timer now</button>
       </div>
@@ -466,7 +466,7 @@
     { id: 'robot',   name: 'Robot',          play: () => { [300, 200, 400, 250].forEach((f, i) => tone(f, i * .09, .09, 'square', .2)); } },
     { id: 'whistle', name: 'Slide whistle',  play: () => tone(500, 0, .6, 'sine', .35, 2000) },
   ];
-  // Original 30-second "thinking" tune for Final Jeopardy (composed here, not the TV theme):
+  // Original "thinking" tune (stretched to the clock length) for Final Jeopardy (composed here, not the TV theme):
   // a ticking clock over a D–Bm–G–A progression, ending with a "time's up" sting.
   function playThinkMusic(seconds) {
     const a = audio(), out = a.createGain();
@@ -500,7 +500,7 @@
     return () => { try { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.05); setTimeout(() => out.disconnect(), 600); } catch {} };
   }
   const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString();
-  const FJ_MS = 30000, FJ_GRACE_MS = 1500;
+  const FJ_MS = 32000, FJ_GRACE_MS = 1500;
 
   const soundById = (id) => SOUNDS.find((s) => s.id === id) || SOUNDS[0];
   function playSound(id) { try { soundById(id).play(); } catch (e) { console.warn(e); } }
@@ -989,10 +989,10 @@
       $('fj-music-name').textContent = musicFile ? musicFile.name : 'Built-in tune';
       $('fj-music-clear').classList.toggle('hidden', !musicFile);
       $('fj-music-note').textContent = note || (musicFile
-        ? 'Starts with the 30-second clock and stops when time is up. Saved in this browser only.'
+        ? 'Starts with the 32-second clock and stops when time is up. Saved in this browser only.'
         : 'Want your own? Choose an audio file on this device. It\'s never uploaded anywhere.');
     }
-    // Play the chosen file from the start; it fades out when the 30 seconds are up.
+    // Play the chosen file from the start; it fades out when the 32 seconds are up.
     function playFileMusic(ms) {
       const el = new Audio(musicFile.url); let done = false, fadeTimer = null;
       el.play().catch(() => renderMusic('Couldn\'t play that file on this device. Try an MP3, or use the built-in tune.'));
