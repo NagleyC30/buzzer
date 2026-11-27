@@ -24,6 +24,8 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
 4. **Reveal.** Players are listed lowest score first. For each one, click **Reveal answer**, then **✓ Right** or **✗ Wrong**. Their bet and final score appear on the TV and on their phone.
 5. **Finish Final Jeopardy** returns everyone to the buzzer.
 
+**Using your own music:** under the Final Jeopardy controls, click **Choose music file…** and pick an audio file on the host device (MP3, M4A, WAV and so on, up to 40 MB). It starts with the 30-second clock and fades out when time is up. **▶ Preview** lets you check it first. The file is saved in that browser for next time and is never uploaded anywhere. **Use built-in tune** switches back. The site doesn't include the TV show's theme because it's copyrighted; use a copy you own.
+
 The clue isn't sent to phones until you reveal it. Bets and answers stay on the host screen, hidden, until you reveal them.
 
 If the host refreshes the page, the room keeps the same code and players reconnect on their own.

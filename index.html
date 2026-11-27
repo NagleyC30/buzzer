@@ -143,6 +143,9 @@
   #fj-player .fj-board { padding: 20px 16px; }
   #fj-player .fj-clue { font-size: 22px; }
   #fj-player .fj-timer { font-size: 56px; }
+  .music-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .music-row .grow { flex: 1 1 220px; overflow-wrap: anywhere; }
+  .music-row button { padding: 8px 14px; }
   .fj-msg { text-align: center; font-size: 18px; font-weight: 600; }
   @keyframes flash { from { box-shadow: 0 0 0 6px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
 </style>
@@ -304,6 +307,14 @@
       <div class="host-actions" style="align-items:center">
         <label class="row" style="font-weight:500; margin:0; flex:1"><input type="checkbox" id="fj-music" checked style="width:auto"> Play thinking music</label>
         <button id="fjh-exit" class="secondary">Finish Final Jeopardy</button>
+      </div>
+      <div class="music-row">
+        <div class="grow">Music: <strong id="fj-music-name">Built-in tune</strong>
+          <div class="muted" id="fj-music-note" style="font-size:14px">Want your own? Choose an audio file on this device. It's never uploaded anywhere.</div></div>
+        <input type="file" id="fj-music-file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg" class="hidden">
+        <button id="fj-music-pick" class="secondary">Choose music file…</button>
+        <button id="fj-music-preview" class="secondary">▶ Preview</button>
+        <button id="fj-music-clear" class="secondary hidden">Use built-in tune</button>
       </div>
     </div>
   </div>
@@ -956,6 +967,63 @@
       if (Date.now() >= f.endsAt + FJ_GRACE_MS) fjEndTimer();
       else if (Date.now() - lastFjBroadcast > 5000) { lastFjBroadcast = Date.now(); broadcast(); } // keeps late joiners' clocks right
     }, 250);
+    // ---- Optional music file chosen by the host. Kept in this browser only (IndexedDB), never uploaded.
+    const MAX_MUSIC_BYTES = 40 * 1024 * 1024;
+    let musicFile = null, stopPreview = null; // musicFile: { name, url }
+    const idb = (mode, fn) => new Promise((resolve, reject) => {
+      const open = indexedDB.open('gamebuzzer', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('files');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const tx = open.result.transaction('files', mode), req = fn(tx.objectStore('files'));
+        tx.oncomplete = () => { resolve(req && req.result); open.result.close(); };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+    function setMusicFile(name, blob) {
+      if (musicFile) URL.revokeObjectURL(musicFile.url);
+      musicFile = blob ? { name, url: URL.createObjectURL(blob) } : null;
+      renderMusic();
+    }
+    function renderMusic(note) {
+      $('fj-music-name').textContent = musicFile ? musicFile.name : 'Built-in tune';
+      $('fj-music-clear').classList.toggle('hidden', !musicFile);
+      $('fj-music-note').textContent = note || (musicFile
+        ? 'Starts with the 30-second clock and stops when time is up. Saved in this browser only.'
+        : 'Want your own? Choose an audio file on this device. It\'s never uploaded anywhere.');
+    }
+    // Play the chosen file from the start; it fades out when the 30 seconds are up.
+    function playFileMusic(ms) {
+      const el = new Audio(musicFile.url); let done = false, fadeTimer = null;
+      el.play().catch(() => renderMusic('Couldn\'t play that file on this device. Try an MP3, or use the built-in tune.'));
+      const stop = () => {
+        if (done) return; done = true; clearTimeout(endTimer);
+        fadeTimer = setInterval(() => { el.volume = Math.max(0, el.volume - 0.1); if (el.volume <= 0.01) { clearInterval(fadeTimer); el.pause(); el.removeAttribute('src'); el.load(); } }, 40);
+      };
+      const endTimer = setTimeout(stop, ms);
+      return stop;
+    }
+    const startMusic = (ms) => (musicFile ? playFileMusic(ms) : playThinkMusic(ms / 1000));
+    idb('readonly', (st) => st.get('fj-music')).then((v) => { if (v && v.blob) setMusicFile(v.name, v.blob); }).catch(() => {});
+    $('fj-music-pick').onclick = () => $('fj-music-file').click();
+    $('fj-music-file').onchange = async () => {
+      const f = $('fj-music-file').files[0]; $('fj-music-file').value = '';
+      if (!f) return;
+      if (f.size > MAX_MUSIC_BYTES) { renderMusic('That file is too big (over 40 MB). Choose a shorter clip.'); return; }
+      setMusicFile(f.name, f);
+      try { await idb('readwrite', (st) => st.put({ name: f.name, blob: f }, 'fj-music')); }
+      catch { renderMusic('Using this file for now, but this browser couldn\'t save it for next time.'); }
+    };
+    $('fj-music-clear').onclick = () => { if (stopPreview) $('fj-music-preview').click(); setMusicFile(null); idb('readwrite', (st) => st.delete('fj-music')).catch(() => {}); };
+    $('fj-music-preview').onclick = () => {
+      if (stopPreview) { stopPreview(); stopPreview = null; $('fj-music-preview').textContent = '▶ Preview'; return; }
+      const stop = startMusic(FJ_MS);
+      stopPreview = () => stop();
+      $('fj-music-preview').textContent = '■ Stop';
+      const me = stopPreview;
+      setTimeout(() => { if (stopPreview === me) { stopPreview = null; $('fj-music-preview').textContent = '▶ Preview'; } }, FJ_MS);
+    };
+
     function fjFillSetup() {
       $('fj-cat-in').value = hs.fj ? hs.fj.category : (hs.fjDraft || {}).category || '';
       $('fj-clue-in').value = hs.fj ? hs.fj.clue : (hs.fjDraft || {}).clue || '';
@@ -979,7 +1047,8 @@
       if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
       hs.fj.stage = 'clue'; hs.fj.endsAt = Date.now() + FJ_MS; lastFjBroadcast = Date.now(); changed();
       if (stopMusic) stopMusic();
-      stopMusic = $('fj-music').checked ? playThinkMusic(FJ_MS / 1000) : null;
+      if (stopPreview) $('fj-music-preview').click();
+      stopMusic = $('fj-music').checked ? startMusic(FJ_MS) : null;
     };
     $('fj-music').onchange = () => { if (!$('fj-music').checked && stopMusic) { stopMusic(); stopMusic = null; } };
     $('fjh-skip').onclick = () => { if (stopMusic) { stopMusic(); stopMusic = null; } fjEndTimer(); };
