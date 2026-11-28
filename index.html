@@ -3,258 +3,384 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Game Buzzer</title>
-<meta name="description" content="A simple multiplayer game-show buzzer. No accounts, no installs.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23e5484d'/></svg>">
+<title>Buzzers</title>
+<meta name="description" content="Buzzers: a game-show night you run from your living room. Big board on the TV, buzzers on everyone's phones. No accounts, no installs.">
+<meta name="theme-color" content="#3b2417">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%233b2417'/><circle cx='50' cy='50' r='38' fill='%23f3b33d'/><circle cx='50' cy='46' r='30' fill='%23cf3a2b'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@600;700&family=Bungee&family=Nunito:wght@500;700;800;900&display=swap">
 <style>
+  /* =========================================================================
+     Buzzers: retro game-show theme
+     Cream and deep red, marquee-sign display type, light-bulb frames,
+     teal board tiles with marigold values.
+     ========================================================================= */
   :root {
-    --bg: #f6f5f2; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
-    --accent: #e5484d; --accent-dark: #b8282d; --ok: #2f9e66; --warn: #c98a12; --locked: #9a9aa0;
-    --gold: #d4a017;
+    --bg: #fbf0dc; --bg-2: #f5e2c0; --panel: #fffaf0; --text: #2a1a10; --muted: #7a6150; --line: #e6d2b2;
+    --accent: #cf3a2b; --accent-dark: #8e2117; --ok: #2f8a57; --ok-dark: #1d5e3a; --warn: #d8901c; --locked: #a89584;
+    --gold: #f3b33d; --bulb: #ffe7a6; --frame: #3b2417; --frame-2: #5a3a26; --teal: #227a72; --teal-2: #134a45; --cream: #fff4df;
+    --shadow: 4px 4px 0 var(--line);
+    --font-display: 'Bungee', 'Arial Black', Impact, system-ui, sans-serif;
+    --font-body: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-clue: 'Bitter', Rockwell, Georgia, serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
-      --accent: #ff5a5f; --accent-dark: #c2363b; --ok: #3fbf80; --warn: #e5a83b; --locked: #55555c;
+      --bg: #1a110c; --bg-2: #22160f; --panel: #2a1b13; --text: #fbecd6; --muted: #c4a68a; --line: #45301f;
+      --accent: #ea4a3a; --accent-dark: #a72a1d; --ok: #3cae6f; --ok-dark: #24774a; --warn: #e9a53b; --locked: #6f5d4f;
+      --frame: #110a06; --frame-2: #3a2416; --shadow: 4px 4px 0 #0c0704;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
-    --accent: #ff5a5f; --accent-dark: #c2363b; --ok: #3fbf80; --warn: #e5a83b; --locked: #55555c;
+    --bg: #1a110c; --bg-2: #22160f; --panel: #2a1b13; --text: #fbecd6; --muted: #c4a68a; --line: #45301f;
+    --accent: #ea4a3a; --accent-dark: #a72a1d; --ok: #3cae6f; --ok-dark: #24774a; --warn: #e9a53b; --locked: #6f5d4f;
+    --frame: #110a06; --frame-2: #3a2416; --shadow: 4px 4px 0 #0c0704;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; min-height: 100%; }
   body {
     background: var(--bg); color: var(--text);
-    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 16px/1.45 var(--font-body); font-weight: 500;
     -webkit-tap-highlight-color: transparent;
   }
-  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 28px; margin: 0 0 4px; }
-  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
-  p.sub { color: var(--muted); margin: 0 0 24px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 22px 16px 48px; }
+  .wrap.narrow { max-width: 500px; }
+  h1 { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.15; margin: 0 0 6px; color: var(--accent); }
+  h2 { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 12px; }
+  h3 { margin: 0; font-size: 20px; font-weight: 900; }
+  p.sub { color: var(--muted); margin: 0 0 22px; }
+  a { color: inherit; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
   .stack > * + * { margin-top: 16px; }
-  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  label { display: block; font-weight: 800; margin-bottom: 6px; }
   input, select, textarea {
-    width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    width: 100%; font: inherit; font-weight: 600; padding: 12px 14px; border-radius: 12px;
+    border: 2px solid var(--line); background: var(--panel); color: var(--text);
   }
-  input.code { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; font-size: 22px; text-align: center; }
-  button {
-    font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer;
-    background: var(--text); color: var(--bg);
+  input:focus, select:focus, textarea:focus { outline: 3px solid color-mix(in srgb, var(--gold) 70%, transparent); outline-offset: 1px; border-color: var(--gold); }
+  input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); flex: 0 0 auto; }
+  input.code { text-transform: uppercase; letter-spacing: .14em; font-family: var(--font-display); font-weight: 400; font-size: 24px; text-align: center; }
+  textarea { resize: vertical; line-height: 1.4; }
+
+  /* Buttons: chunky, with a pressable bottom edge */
+  button, .btn {
+    font: inherit; font-weight: 800; border: 0; border-radius: 12px; padding: 12px 18px; cursor: pointer;
+    background: var(--accent); color: #fff; box-shadow: 0 4px 0 var(--accent-dark);
+    transition: transform .06s, box-shadow .06s; text-decoration: none; display: inline-block; text-align: center;
   }
-  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
-  button.big { width: 100%; padding: 16px; font-size: 18px; }
+  button:active:not(:disabled), .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-dark); }
+  button.secondary, .btn.secondary { background: var(--panel); color: var(--text); border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); }
+  button.secondary:active:not(:disabled) { box-shadow: 0 0 0 var(--line); }
+  button.big, .btn.big { width: 100%; padding: 16px; font-size: 18px; }
   button:disabled { opacity: .5; cursor: default; }
+  .btn-ok, button.btn-ok { background: var(--ok); color: #fff; border: 0; box-shadow: 0 4px 0 var(--ok-dark); }
+  .btn-bad, button.btn-bad { background: var(--accent); color: #fff; border: 0; box-shadow: 0 4px 0 var(--accent-dark); }
+  .open-now, #lock-btn.open-now { background: var(--ok); color: #fff; border: 0; box-shadow: 0 4px 0 var(--ok-dark); font-size: 18px; padding: 16px; }
+  .lock-now, #lock-btn.lock-now { background: var(--accent); color: #fff; border: 0; box-shadow: 0 4px 0 var(--accent-dark); font-size: 18px; padding: 16px; }
+  .x, button.x { background: transparent; color: var(--muted); padding: 2px 8px; border: 0; box-shadow: none; font-size: 20px; }
+  .linklike, button.linklike { background: none; border: 0; box-shadow: none; padding: 0; color: var(--muted); text-decoration: underline; font-weight: 700; font-size: 14px; }
+
   .row { display: flex; gap: 10px; align-items: center; }
   .row > .grow { flex: 1; }
   .hidden { display: none !important; }
-  .err { color: var(--accent); font-weight: 600; }
+  .err { color: var(--accent); font-weight: 800; }
   .muted { color: var(--muted); }
-  .home-grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
-  @media (max-width: 680px) { .home-grid { grid-template-columns: 1fr; } }
+  .empty { color: var(--muted); padding: 22px 0; text-align: center; font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 2px solid var(--line); font-size: 14px; font-weight: 700; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); flex: 0 0 auto; }
+  .dot.on { background: var(--ok); }
+  .badge { font-size: 12px; font-weight: 900; background: var(--gold); color: #3b2a00; border-radius: 6px; padding: 1px 6px; }
+  .banner { background: var(--gold); color: #2a1a10; border-radius: 14px; padding: 12px 16px; font-weight: 800; text-align: center; box-shadow: 0 4px 0 #b9821f; }
+  .masked { filter: blur(6px); }
+  .flash { animation: flash .6s ease-out; }
+  @keyframes flash { from { box-shadow: 0 0 0 8px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
+
+  /* The logo, and the marquee sign: a dark frame ringed with chasing light bulbs */
+  .logo { font-family: var(--font-display); color: var(--accent); letter-spacing: .04em; line-height: 1; text-shadow: 2px 2px 0 var(--gold), 4px 4px 0 var(--frame); white-space: nowrap; }
+  .logo.xl { font-size: clamp(52px, 13vw, 110px); }
+  .logo.md { font-size: 36px; }
+  .logo.sm { font-size: 22px; text-shadow: 2px 2px 0 var(--gold); }
+  .marquee { position: relative; background: var(--frame); border-radius: 22px; padding: 24px; box-shadow: 0 8px 0 rgba(0,0,0,.18); }
+  .marquee::before {
+    content: ''; position: absolute; inset: 5px; border-radius: 18px; padding: 8px; pointer-events: none;
+    background: radial-gradient(circle, var(--bulb) 0 3.6px, transparent 4.6px) 0 0 / 22px 22px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    filter: drop-shadow(0 0 3px #ffc95c); animation: chase 1.4s steps(1) infinite;
+  }
+  .marquee > * { position: relative; z-index: 1; }
+  @keyframes chase { 50% { background-position: 11px 11px; } }
+  .sign { display: inline-block; padding: 26px 40px; }
+  .sign .logo { color: var(--cream); text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 #000; }
+  @media (prefers-reduced-motion: reduce) { .marquee::before { animation: none; } }
+
+  /* ---------- Home ---------- */
+  .hero { text-align: center; padding: 18px 0 8px; }
+  .tagline { font-size: 19px; font-weight: 800; margin: 26px auto 26px; max-width: 560px; }
+  .home-grid { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .home-grid { grid-template-columns: 1fr; } }
+  .home-grid .card { display: flex; flex-direction: column; }
+  .home-grid .card > :last-child { margin-top: auto; }
+  .home-grid h2 { font-size: 15px; color: var(--text); }
+  .home-grid p { margin: 0 0 14px; }
+  .footnote { text-align: center; font-size: 14px; margin-top: 26px; }
 
   /* ---------- Player ---------- */
   #player-game { display: flex; flex-direction: column; align-items: center; min-height: calc(100dvh - 48px); }
   .player-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
-  .dot.on { background: var(--ok); }
-  .buzzer-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; width: 100%; }
+  .player-top .pill { white-space: nowrap; }
+  @media (max-width: 480px) { #me-room-wrap { display: none; } .player-top .logo.sm { font-size: 19px; } }
+  .buzzer-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; width: 100%; }
   #buzzer {
-    width: min(78vw, 60vh, 380px); aspect-ratio: 1; border-radius: 50%; padding: 0;
-    background: radial-gradient(circle at 35% 30%, #ff8a8d, var(--accent) 45%, var(--accent-dark));
-    color: #fff; font-size: clamp(28px, 8vw, 48px); font-weight: 800; letter-spacing: .08em;
-    box-shadow: 0 14px 0 #7a1a1d, 0 24px 40px rgba(0,0,0,.35);
+    width: min(78vw, 58vh, 380px); aspect-ratio: 1; border-radius: 50%; padding: 0; border: 10px solid var(--frame);
+    background: radial-gradient(circle at 35% 30%, #ff8f80, var(--accent) 45%, var(--accent-dark));
+    color: var(--cream); font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 9vw, 54px); letter-spacing: .06em;
+    text-shadow: 3px 3px 0 rgba(0,0,0,.35);
+    box-shadow: 0 14px 0 #5c160f, 0 24px 40px rgba(0,0,0,.35);
     transition: transform .06s, box-shadow .06s, filter .2s;
     touch-action: manipulation; user-select: none; -webkit-user-select: none;
   }
-  #buzzer:active:not(:disabled), #buzzer.pressed { transform: translateY(10px); box-shadow: 0 4px 0 #7a1a1d, 0 10px 20px rgba(0,0,0,.35); }
+  #buzzer:active:not(:disabled), #buzzer.pressed { transform: translateY(10px); box-shadow: 0 4px 0 #5c160f, 0 10px 20px rgba(0,0,0,.35); }
   #buzzer:disabled { opacity: 1; filter: grayscale(1) brightness(.85); cursor: default; }
-  #buzzer.mine { filter: none; background: radial-gradient(circle at 35% 30%, #ffe48a, var(--gold) 50%, #8a6a08); box-shadow: 0 4px 0 #5e4805, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
-  /* Jeopardy: locked while the host reads (still tappable), and the ¼-second early-buzz lockout */
-  #buzzer.wait { background: radial-gradient(circle at 35% 30%, #d0d0d4, #94949a 50%, #5f5f65); box-shadow: 0 14px 0 #3a3a3e, 0 24px 40px rgba(0,0,0,.35); }
-  #buzzer.lockout, #buzzer.lockout:active { background: radial-gradient(circle at 35% 30%, #6e6e74, #404046 55%, #232326); box-shadow: 0 4px 0 #111, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
+  #buzzer.mine { filter: none; background: radial-gradient(circle at 35% 30%, #ffe9a0, var(--gold) 50%, #94640f); color: var(--frame); text-shadow: none; box-shadow: 0 4px 0 #5e4005, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
+  /* Fair-start rules: locked while the host reads (still tappable), and the ¼-second early-buzz lockout */
+  #buzzer.wait { background: radial-gradient(circle at 35% 30%, #e2d6c6, #a8998a 50%, #6c5d50); box-shadow: 0 14px 0 #3a2f27, 0 24px 40px rgba(0,0,0,.35); }
+  #buzzer.lockout, #buzzer.lockout:active { background: radial-gradient(circle at 35% 30%, #75675c, #463a31 55%, #261e18); box-shadow: 0 4px 0 #120d09, 0 10px 20px rgba(0,0,0,.35); transform: translateY(10px); }
   #buzzer.go { animation: go .4s ease-out; }
   @keyframes go { from { filter: brightness(1.7); } to { filter: none; } }
-  #status { font-size: 22px; font-weight: 700; text-align: center; min-height: 1.4em; }
-  #status-sub { color: var(--muted); text-align: center; margin-top: -18px; min-height: 1.4em; }
+  #status { font-size: 23px; font-weight: 900; text-align: center; min-height: 1.4em; }
+  #status-sub { color: var(--muted); text-align: center; margin-top: -16px; min-height: 1.4em; font-weight: 700; }
+  .join-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .code-tag { font-family: var(--font-display); color: var(--muted); font-size: 18px; }
 
-  /* ---------- Host ---------- */
-  .host-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-  .room-code { font-size: clamp(30px, 8.5vw, 56px); font-weight: 800; letter-spacing: .06em; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .join-box { display: flex; gap: 16px; align-items: center; }
-  #qr { background: #fff; padding: 8px; border-radius: 10px; line-height: 0; }
-  #qr img, #qr svg { width: 120px; height: 120px; }
-  .host-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-  @media (max-width: 760px) { .host-grid { grid-template-columns: 1fr; } }
+  /* Clue cards and screens: a retro TV in teal, framed in dark wood */
+  .gclue, .gfinal, .fj-board, .pclue {
+    background: radial-gradient(ellipse at 50% 0%, #2c8b82, var(--teal-2) 75%); color: var(--cream);
+    border: 8px solid var(--frame); box-shadow: inset 0 0 0 3px var(--gold), 0 6px 0 rgba(0,0,0,.18); border-radius: 22px; text-align: center;
+  }
+  .pclue { width: 100%; max-width: 520px; padding: 14px 16px; border-width: 5px; }
+  .pclue .pc-top { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--gold); font-weight: 900; }
+  .pclue .pc-text { font-family: var(--font-clue); font-weight: 700; font-size: 21px; margin-top: 6px; line-height: 1.3; overflow-wrap: anywhere; }
+  .buzzer-area.with-clue { gap: 18px; justify-content: flex-start; padding-top: 12px; }
+  .buzzer-area.with-clue #buzzer { width: min(62vw, 36vh, 300px); }
+
+  /* ---------- Game screen (the TV) ---------- */
+  .tv { min-height: 100dvh; display: flex; flex-direction: column; gap: 14px; padding: 14px 18px 18px; }
+  .tv-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tv-bar .spacer { flex: 1; }
+  .tv-status { display: flex; flex-direction: column; font-size: 13px; font-weight: 800; line-height: 1.3; }
+  #remote-status { color: var(--ok); }
+  #drawer-btn { padding: 10px 14px; }
+  .tv-join-mini { display: none; align-items: center; gap: 10px; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 5px 6px 5px 12px; }
+  body:not(.lobby-on) .tv-join-mini { display: flex; }
+  .tv-join-mini .lbl { font-size: 12px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .tv-join-mini .code { font-family: var(--font-display); font-size: 20px; letter-spacing: .06em; }
+  .qr-mini { background: #fff; padding: 3px; border-radius: 6px; line-height: 0; }
+  .qr-mini svg { width: 48px; height: 48px; }
+  .lobby { flex: 1; display: grid; grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr); gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .lobby { grid-template-columns: 1fr; } }
+  .join-card { color: var(--cream); text-align: center; }
+  .join-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .join-title { font-family: var(--font-display); color: var(--gold); font-size: clamp(28px, 3.4vw, 48px); line-height: 1.05; text-shadow: 3px 3px 0 #000; }
+  .qr-big { background: #fff; padding: 14px; border-radius: 16px; line-height: 0; }
+  .qr-big svg { width: min(30vh, 300px); height: min(30vh, 300px); }
+  .join-how { font-weight: 700; opacity: .9; }
+  .join-url { font-weight: 900; font-size: clamp(15px, 1.5vw, 21px); overflow-wrap: anywhere; color: var(--cream); }
+  .join-code-lbl { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .12em; color: var(--gold); margin-top: 4px; }
+  .room-code { font-family: var(--font-display); font-size: clamp(34px, 5vw, 74px); line-height: 1; letter-spacing: .06em; color: var(--cream); white-space: nowrap; }
+  #copy-link { padding: 8px 14px; font-size: 14px; }
+  .lobby-side { display: flex; flex-direction: column; gap: 18px; }
+  .lobby-help { font-weight: 700; }
+  .lobby-help ol { margin: 6px 0 0; padding-left: 22px; }
+  .lobby-help li + li { margin-top: 4px; }
+
+  /* Buzz order and player lists */
   ol.order { list-style: none; margin: 0; padding: 0; }
-  ol.order li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  ol.order li { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); }
   ol.order li + li { margin-top: 8px; }
-  ol.order li .pos { font-weight: 800; font-size: 20px; width: 44px; text-align: center; }
-  ol.order li .name { flex: 1; font-weight: 700; font-size: 20px; overflow-wrap: anywhere; }
-  ol.order li .delta { color: var(--muted); font-variant-numeric: tabular-nums; }
-  ol.order li.first { background: color-mix(in srgb, var(--gold) 22%, var(--panel)); border-color: var(--gold); }
-  ol.order li.first .name { font-size: 28px; }
+  ol.order li .pos { font-family: var(--font-display); font-size: 18px; width: 48px; text-align: center; color: var(--muted); }
+  ol.order li .name { flex: 1; font-weight: 900; font-size: 21px; overflow-wrap: anywhere; }
+  ol.order li .delta { color: var(--muted); font-weight: 800; font-variant-numeric: tabular-nums; }
+  ol.order li.first { background: color-mix(in srgb, var(--gold) 30%, var(--panel)); border-color: var(--gold); }
+  ol.order li.first .pos { color: var(--accent); }
+  ol.order li.first .name { font-size: 30px; }
   ul.players { list-style: none; margin: 0; padding: 0; }
-  ul.players li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.players li { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 2px dashed var(--line); font-weight: 800; }
   ul.players li:last-child { border-bottom: 0; }
   ul.players li .name { flex: 1; overflow-wrap: anywhere; }
   ul.players li.offline .name { color: var(--muted); }
-  .x { background: transparent; color: var(--muted); padding: 2px 8px; border: 0; font-size: 18px; }
-  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  ul.players li button.secondary { padding: 4px 10px; font-size: 14px; }
   .host-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .host-actions button { flex: 1; min-width: 140px; }
   #reset-btn { font-size: 18px; padding: 16px; }
-  .open-now, #lock-btn.open-now { background: var(--ok); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
-  .lock-now, #lock-btn.lock-now { background: var(--accent); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
-  .flash { animation: flash .5s ease-out; }
 
-  /* ---------- Game screen + host remote ---------- */
+  /* The host menu: a drawer that slides in from the right */
+  .drawer { position: fixed; top: 0; right: 0; height: 100dvh; width: min(420px, 92vw); background: var(--panel); border-left: 3px solid var(--line);
+    box-shadow: -14px 0 34px rgba(0,0,0,.28); transform: translateX(105%); transition: transform .22s ease; z-index: 50; overflow-y: auto; padding: 18px 20px 28px; }
+  .drawer:not(.open) { visibility: hidden; box-shadow: none; transition: transform .22s ease, visibility 0s .22s; }
+  .drawer.open { transform: none; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .dsec { padding-top: 16px; margin-top: 16px; border-top: 2px dashed var(--line); }
+  .dsec > * + * { margin-top: 10px; }
+  .dsec p { margin: 0; font-size: 14px; }
+  .dsec label.row { font-weight: 800; align-items: flex-start; }
+  .dsec .hint { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .scrim { position: fixed; inset: 0; background: rgba(20,10,5,.45); z-index: 40; }
+
+  /* Host remote shown/hidden on the game screen */
   .remote-only { display: none; }
   body.remote-on:not(.controls-forced) .tv-control { display: none !important; }
   body.remote-on:not(.controls-forced) .remote-only { display: inline; }
-  .banner { background: var(--warn); color: #111; border-radius: 12px; padding: 12px 16px; font-weight: 600; margin-bottom: 16px; text-align: center; }
-  .linklike { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; font-weight: 500; font-size: 14px; }
-  dialog { border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--panel); color: var(--text); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
-  dialog::backdrop { background: rgba(0,0,0,.55); }
-  dialog .body { padding: 20px; }
-  dialog h3 { margin: 0; font-size: 20px; }
-  .qrbox { background: #fff; padding: 10px; border-radius: 10px; line-height: 0; flex: 0 0 auto; }
+
+  /* Dialogs */
+  dialog { border: 2px solid var(--line); border-radius: 20px; padding: 0; background: var(--panel); color: var(--text); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  dialog::backdrop { background: rgba(20,10,5,.6); }
+  dialog .body { padding: 22px; }
+  .qrbox { background: #fff; padding: 10px; border-radius: 12px; line-height: 0; flex: 0 0 auto; }
   .qrbox svg { width: 180px; height: 180px; }
+
+  /* ---------- Host remote (phone) ---------- */
   #view-remote { max-width: 600px; }
-  #view-remote h1 { font-size: 22px; margin: 0; }
-  .r-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
-  .r-key { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-  .r-key .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-  .r-key .val { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+  .r-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .r-title { display: flex; align-items: baseline; gap: 10px; }
+  .r-title span { font-weight: 900; color: var(--muted); }
+  .r-key { background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .r-key .lbl { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .r-key .val { font-size: 18px; font-weight: 800; overflow-wrap: anywhere; }
   .r-key .val.resp { color: var(--ok); }
   .r-ans { font-size: 16px; overflow-wrap: anywhere; }
   .r-ans.dim { color: var(--muted); }
+  #r-g-judge button { white-space: pre-line; line-height: 1.25; }
+  #r-g-scores li .sc { font-weight: 900; font-variant-numeric: tabular-nums; }
+  #r-g-scores li .sc.neg { color: var(--accent); }
+  #r-g-scores li button { padding: 4px 10px; font-size: 14px; }
 
-  /* ---------- Board game ---------- */
-  body.game-on #view-host.wrap { max-width: 1400px; padding-top: 12px; }
-  body.game-on .host-head { margin-bottom: 10px; align-items: center; }
-  body.game-on .host-head h2 { display: none; }
-  body.game-on .room-code { font-size: 26px; }
-  body.game-on #host-conn { font-size: 13px; }
-  body.game-on #qr { padding: 4px; }
-  body.game-on #qr svg { width: 64px; height: 64px; }
-  body.game-on #join-url { font-size: 13px; }
-  body.game-on #copy-link { display: none; }
-  .gboard { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; background: #000; padding: 6px; border-radius: 14px; }
-  .gboard .gcat { background: #0b1d94; color: #fff; font-weight: 800; text-transform: uppercase; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 76px; padding: 8px; font-size: clamp(12px, 1.5vw, 20px); overflow-wrap: anywhere; line-height: 1.15; }
-  .gboard .gcell { background: #0b1d94; color: #ffd54a; font-weight: 800; font-size: clamp(18px, 3vw, 44px); display: flex; align-items: center; justify-content: center; min-height: clamp(52px, 10vh, 112px); border: 0; border-radius: 0; padding: 0; text-shadow: 2px 2px 0 #000; }
-  .gboard .gcell:disabled { opacity: 1; cursor: default; }
-  .gboard .gcell.dd-mark::after { content: 'DD'; font-size: 10px; margin-left: 4px; color: #fff; text-shadow: none; vertical-align: top; }
-  .gboard.mini { gap: 3px; padding: 3px; border-radius: 10px; }
-  .gboard.mini .gcat { min-height: 46px; font-size: 9px; padding: 3px; letter-spacing: 0; }
-  .gboard.mini .gcell { min-height: 40px; font-size: 13px; text-shadow: none; }
-  .gclue { background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; min-height: 58vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; }
-  .gc-top { font-size: clamp(16px, 2vw, 26px); opacity: .85; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
-  .gc-text { font-family: Georgia, "Times New Roman", serif; font-size: clamp(26px, 4.2vw, 60px); text-transform: uppercase; line-height: 1.25; margin: 20px 0; overflow-wrap: anywhere; }
-  .gc-status { font-size: clamp(22px, 3vw, 40px); font-weight: 800; color: #ffd54a; min-height: 1.3em; }
-  .gc-status.who { font-size: clamp(34px, 5vw, 72px); }
-  .gc-dd { font-size: clamp(48px, 9vw, 130px); font-weight: 900; color: #ffd54a; letter-spacing: .04em; text-shadow: 4px 4px 0 #000; line-height: 1; animation: ddpop .6s ease-out; }
+  /* ---------- The board ---------- */
+  .gboard { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+  .gboard.marquee { padding: 22px; border-radius: 24px; }
+  .gboard .gcat {
+    background: linear-gradient(180deg, #c73c2d, #8e2117); color: var(--cream); font-weight: 900; text-transform: uppercase; letter-spacing: .03em;
+    text-align: center; display: flex; align-items: center; justify-content: center; min-height: 80px; padding: 8px; border-radius: 10px;
+    font-size: clamp(12px, 1.45vw, 21px); overflow-wrap: anywhere; line-height: 1.12; text-shadow: 1px 2px 0 rgba(0,0,0,.35);
+  }
+  .gboard .gcell {
+    background: linear-gradient(180deg, #2a8a80, var(--teal-2)); color: var(--gold); font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(18px, 3.1vw, 48px); display: flex; align-items: center; justify-content: center; min-height: clamp(52px, 10.5vh, 118px);
+    border: 0; border-radius: 10px; padding: 0; text-shadow: 3px 3px 0 rgba(0,0,0,.45); box-shadow: inset 0 -6px 0 rgba(0,0,0,.25);
+  }
+  .gboard .gcell:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 -2px 0 rgba(0,0,0,.25); }
+  .gboard .gcell:disabled { opacity: 1; cursor: default; background: #0f3a36; box-shadow: none; }
+  .gboard .gcell.dd-mark::after { content: '2×'; font-family: var(--font-body); font-weight: 900; font-size: 10px; margin-left: 4px; color: var(--cream); text-shadow: none; vertical-align: top; }
+  .gboard.mini { gap: 3px; padding: 4px; border-radius: 10px; background: var(--frame); }
+  .gboard.mini .gcat { min-height: 46px; font-size: 8.5px; padding: 3px 2px; letter-spacing: 0; border-radius: 4px; text-shadow: none; overflow-wrap: normal; word-break: normal; hyphens: auto; -webkit-hyphens: auto; }
+  .gboard.mini .gcell { min-height: 40px; font-size: 12px; border-radius: 4px; text-shadow: none; box-shadow: none; }
+
+  .gclue, .gfinal { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 28px; }
+  .gc-top { font-size: clamp(16px, 1.9vw, 26px); text-transform: uppercase; letter-spacing: .1em; font-weight: 900; color: var(--gold); }
+  .gc-text { font-family: var(--font-clue); font-weight: 700; font-size: clamp(26px, 4vw, 60px); line-height: 1.25; margin: 22px 0; overflow-wrap: anywhere; max-width: 1200px; }
+  .gc-status { font-family: var(--font-display); font-size: clamp(22px, 3vw, 42px); color: var(--gold); min-height: 1.3em; text-shadow: 3px 3px 0 rgba(0,0,0,.4); }
+  .gc-status.who { font-size: clamp(36px, 5.4vw, 80px); }
+  .gc-dd { font-family: var(--font-display) !important; font-weight: 400 !important; font-size: clamp(52px, 9vw, 140px) !important; color: var(--gold); text-shadow: 5px 5px 0 var(--accent), 9px 9px 0 #000; line-height: 1; animation: ddpop .6s ease-out; }
   @keyframes ddpop { from { transform: scale(.3) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
-  .gfinal { position: relative; overflow: hidden; background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; min-height: 62vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; }
+  .gc-resp { margin-top: 14px; font-size: clamp(18px, 2.2vw, 30px); font-weight: 800; }
+
+  /* Scores along the bottom of the TV */
+  .gscores { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 14px; }
+  .gscore { background: var(--frame); color: var(--cream); border: 3px solid var(--frame-2); border-radius: 16px; padding: 8px 18px; text-align: center; min-width: 120px; }
+  .gscore .n { font-weight: 900; overflow-wrap: anywhere; }
+  .gscore .s { font-family: var(--font-display); font-size: 26px; color: var(--gold); font-variant-numeric: tabular-nums; }
+  .gscore .s.neg { color: #ff8f80; }
+  .gscore.ctrl { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(243,179,61,.6); }
+  .gscore.ans { background: var(--accent); border-color: var(--gold); }
+  .gscore.pickable { cursor: pointer; outline: 3px dashed var(--gold); outline-offset: 2px; }
+
+  /* Winner screen */
+  .gfinal { position: relative; overflow: hidden; }
   .gf-trophy { font-size: clamp(48px, 8vw, 110px); line-height: 1; }
-  .gf-title { font-size: clamp(28px, 4.6vw, 64px); font-weight: 900; color: #ffd54a; margin: 12px 0 22px; text-shadow: 3px 3px 0 #000; overflow-wrap: anywhere; }
-  ol.gf-list { list-style: none; margin: 0; padding: 0; width: min(640px, 100%); position: relative; z-index: 1; }
-  ol.gf-list li { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-radius: 12px; background: rgba(255,255,255,.08); font-size: clamp(18px, 2.4vw, 30px); }
+  .gf-title { font-family: var(--font-display); font-size: clamp(28px, 4.4vw, 64px); color: var(--gold); margin: 12px 0 22px; text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 #000; overflow-wrap: anywhere; line-height: 1.1; }
+  ol.gf-list { list-style: none; margin: 0; padding: 0; width: min(660px, 100%); position: relative; z-index: 1; }
+  ol.gf-list li { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-radius: 14px; background: rgba(0,0,0,.22); font-size: clamp(18px, 2.4vw, 30px); }
   ol.gf-list li + li { margin-top: 8px; }
-  ol.gf-list li.top { background: rgba(255,213,74,.22); outline: 2px solid #ffd54a; }
-  ol.gf-list .rk { width: 2.2em; font-weight: 800; opacity: .8; }
-  ol.gf-list .nm { flex: 1; text-align: left; font-weight: 700; overflow-wrap: anywhere; }
-  ol.gf-list .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  ol.gf-list li.top { background: rgba(243,179,61,.25); outline: 3px solid var(--gold); }
+  ol.gf-list .rk { width: 2.4em; font-family: var(--font-display); opacity: .85; }
+  ol.gf-list .nm { flex: 1; text-align: left; font-weight: 900; overflow-wrap: anywhere; }
+  ol.gf-list .sc { font-family: var(--font-display); color: var(--gold); font-variant-numeric: tabular-nums; }
   .confetti { position: absolute; inset: 0; pointer-events: none; }
   .confetti i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear forwards; }
   @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
   @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
-  .gscore.pickable { cursor: pointer; outline: 2px dashed var(--gold); }
-  .gc-resp { margin-top: 14px; font-size: clamp(18px, 2.2vw, 30px); }
-  .gscores { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 12px; }
-  .gscore { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 16px; text-align: center; min-width: 110px; }
-  .gscore .n { font-weight: 700; overflow-wrap: anywhere; }
-  .gscore .s { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .gscore .s.neg { color: var(--accent); }
-  .gscore.ctrl { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
-  .gscore.ans { background: color-mix(in srgb, var(--gold) 30%, var(--panel)); }
-  .pclue { width: 100%; max-width: 520px; background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; padding: 14px 16px; text-align: center; }
-  .pclue .pc-top { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; opacity: .85; font-weight: 700; }
-  .pclue .pc-text { font-family: Georgia, "Times New Roman", serif; font-size: 20px; text-transform: uppercase; margin-top: 6px; overflow-wrap: anywhere; }
-  .buzzer-area.with-clue { gap: 18px; justify-content: flex-start; padding-top: 12px; }
-  .buzzer-area.with-clue #buzzer { width: min(62vw, 38vh, 300px); }
-  #r-g-scores li .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
-  #r-g-scores li .sc.neg { color: var(--accent); }
-  #r-g-scores li button { padding: 4px 10px; font-size: 14px; }
-  .badge { font-size: 12px; font-weight: 700; background: var(--gold); color: #3b2a00; border-radius: 6px; padding: 1px 6px; }
 
-  /* ---------- Final Jeopardy ---------- */
-  textarea { resize: vertical; line-height: 1.4; }
-  .masked { filter: blur(6px); }
-  .fj-board { background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 16px; padding: 28px 20px; text-align: center; }
-  .fj-label { font-size: 13px; letter-spacing: .22em; text-transform: uppercase; opacity: .75; }
-  .fj-cat { font-size: clamp(22px, 4vw, 40px); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; overflow-wrap: anywhere; }
-  .fj-clue { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 3.4vw, 42px); line-height: 1.3; margin-top: 20px; text-transform: uppercase; overflow-wrap: anywhere; }
-  .fj-timer { font-size: clamp(40px, 8vw, 96px); font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 16px; color: #ffd54a; line-height: 1; }
-  .fj-bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.2); overflow: hidden; margin-top: 12px; }
-  .fj-bar > div { height: 100%; width: 100%; background: #ffd54a; transition: width .25s linear; }
-  .fj-note { margin-top: 14px; opacity: .85; }
+  /* ---------- Final Round ---------- */
+  .fj-board { padding: 28px 20px; }
+  .fj-label { font-family: var(--font-display); font-size: 16px; letter-spacing: .1em; color: var(--gold); }
+  .fj-cat { font-size: clamp(22px, 3.8vw, 40px); font-weight: 900; text-transform: uppercase; letter-spacing: .04em; margin-top: 8px; overflow-wrap: anywhere; }
+  .fj-clue { font-family: var(--font-clue); font-weight: 700; font-size: clamp(20px, 3.3vw, 44px); line-height: 1.3; margin-top: 20px; overflow-wrap: anywhere; }
+  .fj-timer { font-family: var(--font-display); font-size: clamp(42px, 8vw, 100px); font-variant-numeric: tabular-nums; margin-top: 16px; color: var(--gold); line-height: 1; text-shadow: 4px 4px 0 rgba(0,0,0,.4); }
+  .fj-bar { height: 12px; border-radius: 6px; background: rgba(0,0,0,.3); overflow: hidden; margin-top: 12px; }
+  .fj-bar > div { height: 100%; width: 100%; background: var(--gold); transition: width .25s linear; }
+  .fj-note { margin-top: 14px; font-weight: 800; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); }
-  .chip.done { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+  .chip { padding: 6px 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--bg); color: var(--muted); font-weight: 800; }
+  .chip.done { border-color: var(--ok); color: var(--ok); }
   ol.fj-reveal { list-style: none; margin: 16px 0 0; padding: 0; }
-  ol.fj-reveal li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  ol.fj-reveal li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); }
   ol.fj-reveal li + li { margin-top: 8px; }
   ol.fj-reveal .who { min-width: 140px; }
   ol.fj-reveal .who strong { display: block; font-size: 20px; overflow-wrap: anywhere; }
-  ol.fj-reveal .ans { flex: 1; min-width: 180px; font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
-  ol.fj-reveal .ans.none { color: var(--muted); font-weight: 500; font-style: italic; }
-  ol.fj-reveal .res { font-size: 18px; font-weight: 700; }
+  ol.fj-reveal .ans { flex: 1; min-width: 180px; font-size: 22px; font-weight: 900; overflow-wrap: anywhere; }
+  ol.fj-reveal .ans.none { color: var(--muted); font-weight: 600; font-style: italic; }
+  ol.fj-reveal .res { font-size: 18px; font-weight: 900; }
   ol.fj-reveal li.right { border-color: var(--ok); }
   ol.fj-reveal li.wrong { border-color: var(--accent); }
   ol.fj-reveal button { padding: 8px 14px; }
-  .btn-ok { background: var(--ok); color: #fff; }
-  .btn-bad { background: var(--accent); color: #fff; }
   #fj-player { width: 100%; max-width: 520px; margin: 16px auto 0; flex: 1; display: flex; flex-direction: column; gap: 16px; }
   #fj-player .fj-board { padding: 20px 16px; }
   #fj-player .fj-clue { font-size: 22px; }
-  #fj-player .fj-timer { font-size: 56px; }
-  .music-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  #fj-player .fj-timer { font-size: 58px; }
+  #fj-host { margin-top: 4px; }
+  .music-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 2px dashed var(--line); }
   .music-row .grow { flex: 1 1 220px; overflow-wrap: anywhere; }
   .music-row button { padding: 8px 14px; }
-  .fj-msg { text-align: center; font-size: 18px; font-weight: 600; }
-  @keyframes flash { from { box-shadow: 0 0 0 6px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
+  .fj-msg { text-align: center; font-size: 18px; font-weight: 900; }
 </style>
 </head>
 <body>
 
 <!-- ============ HOME ============ -->
 <section id="view-home" class="wrap hidden">
-  <h1>🔴 Game Buzzer</h1>
-  <p class="sub">The host puts this on a big screen. Players join on their phones. No accounts, no installs.</p>
+  <div class="hero">
+    <div class="marquee sign"><div class="logo xl">BUZZERS</div></div>
+    <p class="tagline">Game-show night in your living room. The board goes on the TV, the buzzers go on everyone's phones. No accounts, no installs.</p>
+  </div>
   <div class="home-grid">
-    <div class="card stack">
-      <h2>I'm a player</h2>
-      <div><label for="home-code">Room code</label><input id="home-code" class="code" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"></div>
-      <button id="home-join" class="big">Join game</button>
+    <div class="card">
+      <h2>🎮 Join a game</h2>
+      <p class="muted">Scan the QR code on the TV, or type the room code it shows.</p>
+      <div class="stack">
+        <div><label for="home-code">Room code</label><input id="home-code" class="code" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"></div>
+        <button id="home-join" class="big">Join game</button>
+      </div>
     </div>
-    <div class="card stack">
-      <h2>I'm the host</h2>
-      <p class="muted" style="margin:0">Start a room on this device. Keep this tab open: it runs the game.</p>
-      <button id="home-host" class="big secondary">Host a game</button>
-      <a href="editor.html" class="muted" style="display:block; text-align:center">✏️ Write question boards</a>
+    <div class="card">
+      <h2>📺 Host a game</h2>
+      <p class="muted">Open this on the TV or laptop everyone can see. It runs the game, and you control it from your phone.</p>
+      <button id="home-host" class="big btn-ok">Start a game screen</button>
+    </div>
+    <div class="card">
+      <h2>✏️ Write a board</h2>
+      <p class="muted">Write categories and clues, paste them from a spreadsheet, and print an answer key.</p>
+      <a href="editor.html" class="btn big secondary">Open the board editor</a>
     </div>
   </div>
+  <p class="footnote muted">Everything is encrypted between your devices. Nothing to sign up for.</p>
 </section>
 
 <!-- ============ PLAYER: JOIN ============ -->
-<section id="view-join" class="wrap hidden" style="max-width:480px">
-  <h1>Join game <span id="join-code-label" class="muted"></span></h1>
-  <p class="sub">Enter your name and choose your buzzer sound.</p>
+<section id="view-join" class="wrap narrow hidden">
+  <div class="join-head"><div class="logo md">BUZZERS</div></div>
+  <h1>Join the game <span id="join-code-label" class="code-tag"></span></h1>
+  <p class="sub">Enter your name and pick your buzzer sound.</p>
   <form id="join-form" class="card stack">
     <div id="join-code-wrap"><label for="join-code">Room code</label><input id="join-code" class="code" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH"></div>
     <div><label for="join-name">Your name</label><input id="join-name" maxlength="24" autocomplete="nickname" placeholder="e.g. Sam" required></div>
@@ -263,7 +389,7 @@
       <div class="row"><select id="join-sound" class="grow"></select><button type="button" id="preview-sound" class="secondary">▶ Play</button></div>
     </div>
     <div id="join-error" class="err hidden"></div>
-    <button id="join-submit" class="big" type="submit">Let's play</button>
+    <button id="join-submit" class="big" type="submit">Let's play!</button>
   </form>
 </section>
 
@@ -272,6 +398,7 @@
   <div id="player-game">
     <div class="player-top">
       <span class="pill"><span id="conn-dot" class="dot"></span><span id="conn-text">Connecting…</span></span>
+      <span class="logo sm">BUZZERS</span>
       <span class="pill"><strong id="me-name"></strong>&nbsp;<span id="me-room-wrap">· room <span id="me-room"></span></span><span id="me-score" class="hidden"></span></span>
     </div>
     <div class="buzzer-area">
@@ -287,7 +414,7 @@
     </div>
     <div id="fj-player" class="hidden">
       <div class="fj-board">
-        <div class="fj-label">Final Jeopardy</div>
+        <div class="fj-label">Final Round</div>
         <div id="fjp-category" class="fj-cat"></div>
         <div id="fjp-clue" class="fj-clue hidden"></div>
         <div id="fjp-timer-wrap" class="hidden"><div id="fjp-timer" class="fj-timer">32</div><div class="fj-bar"><div id="fjp-bar"></div></div></div>
@@ -312,67 +439,59 @@
   </div>
 </section>
 
-<!-- ============ HOST ============ -->
-<section id="view-host" class="wrap hidden">
+<!-- ============ GAME SCREEN (the TV) ============ -->
+<section id="view-host" class="tv hidden">
   <div id="sound-banner" class="banner hidden">🔇 Click or tap anywhere on this screen once to turn on sound.</div>
-  <div class="host-head">
-    <div>
-      <h2>Room code</h2>
-      <div id="room-code" class="room-code">····</div>
-      <div class="muted" style="margin-top:8px"><span id="host-conn">Starting…</span></div>
-      <div class="row" style="margin-top:8px; gap:12px">
-        <button id="remote-btn" class="secondary" style="padding:8px 12px">📱 Host remote</button>
-        <span id="remote-status" style="color:var(--ok); font-weight:600"></span>
-        <button id="controls-toggle" class="linklike hidden">Show controls on this screen</button>
+  <header class="tv-bar">
+    <div class="logo sm">BUZZERS</div>
+    <div class="tv-join-mini" title="Join from your phone">
+      <span class="lbl">Join</span><span class="code" id="room-code-mini"></span><div id="qr-mini" class="qr-mini"></div>
+    </div>
+    <div class="tv-status"><span id="host-conn" class="muted">Starting…</span><span id="remote-status"></span></div>
+    <div class="spacer"></div>
+    <button id="controls-toggle" class="linklike hidden">Show controls on this screen</button>
+    <button id="drawer-btn" class="secondary">☰ Host menu</button>
+  </header>
+
+  <div class="lobby" id="host-main">
+    <div class="join-card marquee">
+      <div class="join-inner">
+        <div class="join-title">Join the game!</div>
+        <div id="qr" class="qr-big"></div>
+        <div class="join-how">Scan with your phone's camera, or go to</div>
+        <div id="join-url" class="join-url"></div>
+        <div class="join-code-lbl">Room code</div>
+        <div id="room-code" class="room-code">····</div>
+        <button id="copy-link" class="secondary">Copy link</button>
       </div>
     </div>
-    <div class="join-box">
-      <div>
-        <h2>Players join at</h2>
-        <div id="join-url" style="font-weight:600; overflow-wrap:anywhere; max-width:300px"></div>
-        <button id="copy-link" class="secondary" style="margin-top:8px; padding:8px 12px">Copy link</button>
+    <div class="lobby-side">
+      <div class="card">
+        <h2>Buzz order</h2>
+        <ol id="order" class="order"></ol>
+        <div id="order-empty" class="empty">Waiting for someone to buzz…</div>
+        <div class="host-actions tv-control">
+          <button id="reset-btn" class="secondary">New question (N)</button>
+          <button id="lock-btn" class="secondary">Open buzzers (space)</button>
+        </div>
       </div>
-      <div id="qr"></div>
-    </div>
-  </div>
-  <div class="host-grid" id="host-main">
-    <div class="card">
-      <h2>Buzz order</h2>
-      <ol id="order" class="order"></ol>
-      <div id="order-empty" class="empty">Waiting for someone to buzz…</div>
-      <div class="host-actions tv-control">
-        <button id="reset-btn" class="secondary">New question (N)</button>
-        <button id="lock-btn" class="secondary">Open buzzers (space)</button>
+      <div class="card">
+        <h2>Players (<span id="player-count">0</span>)</h2>
+        <ul id="players" class="players"></ul>
+        <div id="players-empty" class="empty">No one has joined yet. Scan the code to play!</div>
       </div>
-      <div class="host-actions tv-control">
-        <button id="fj-open" class="secondary">🏆 Final Jeopardy</button>
-      </div>
-      <div class="host-actions tv-control" style="align-items:center">
-        <select id="gl-select" style="flex:1 1 180px; width:auto"></select>
-        <button id="gl-start" class="secondary">▶ Play this board</button>
-        <button id="gl-file" class="secondary">Open board file…</button>
-        <input type="file" id="gl-file-in" accept=".json,application/json" class="hidden">
-      </div>
-    </div>
-    <div class="card">
-      <h2>Players (<span id="player-count">0</span>)</h2>
-      <ul id="players" class="players"></ul>
-      <div id="players-empty" class="empty">No one has joined yet.</div>
-      <div class="host-actions">
-        <label class="row" style="font-weight:500; margin:0"><input type="checkbox" id="host-sound" checked style="width:auto"> Play sounds here</label>
-      </div>
-      <div class="host-actions tv-control">
-        <label class="row" style="font-weight:500; margin:0; align-items:flex-start"><input type="checkbox" id="jeopardy" checked style="width:auto; margin-top:4px">
-          <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked. Buzzing before you open the buzzers locks that player out for ¼ second.</span></span></label>
-      </div>
-      <div class="host-actions tv-control">
-        <button id="new-room" class="secondary">New room</button>
+      <div class="card lobby-help tv-control">
+        <h2>Hosting tonight?</h2>
+        <ol>
+          <li>Open <strong>☰ Host menu</strong> and connect your phone as the <strong>host remote</strong>.</li>
+          <li>Pick a board to play, or just use the buzzers with your own questions.</li>
+        </ol>
       </div>
     </div>
   </div>
 
   <div id="game-tv" class="hidden">
-    <div id="gt-board" class="gboard"></div>
+    <div id="gt-board" class="gboard marquee"></div>
     <div id="gt-clue" class="gclue hidden">
       <div class="gc-top" id="gt-c-top"></div>
       <div class="gc-text" id="gt-c-text"></div>
@@ -401,16 +520,16 @@
       <button id="gt-cancel" class="secondary">Put clue back</button>
       <button id="gt-undo" class="secondary">Undo last ruling</button>
       <button id="gt-round" class="secondary"></button>
-      <button id="gt-fj" class="secondary">🏆 Final Jeopardy</button>
+      <button id="gt-fj" class="secondary">🏆 Final Round</button>
       <button id="gt-finish" class="secondary">🏁 Show the winner</button>
       <button id="gt-end" class="secondary">End board game</button>
     </div>
-    <p class="muted tv-control" style="font-size:14px; margin-top:8px">Click a value to show that clue. Correct responses appear only on the host remote.</p>
+    <p class="muted tv-control" style="font-size:14px; margin:10px 0 0; text-align:center">Click a value to show that clue. Correct responses appear only on the host remote.</p>
   </div>
 
   <div id="fj-host" class="card hidden">
     <div id="fj-setup" class="stack">
-      <h2>Final Jeopardy setup</h2>
+      <h2>Final Round setup</h2>
       <p class="muted" style="margin:0">Type these before players can see this screen. The clue stays blurred while you type.</p>
       <div><label for="fj-cat-in">Category</label><input id="fj-cat-in" maxlength="80" autocomplete="off" placeholder="e.g. World Capitals"></div>
       <div>
@@ -418,9 +537,9 @@
         <textarea id="fj-clue-in" rows="3" maxlength="400" autocomplete="off" class="masked"></textarea>
       </div>
       <div>
-        <label for="fj-resp-in">Correct response <span class="muted" style="font-weight:500">(shown only on the host remote)</span></label>
+        <label for="fj-resp-in">Correct response <span class="muted" style="font-weight:600">(shown only on the host remote)</span></label>
         <input id="fj-resp-in" maxlength="160" autocomplete="off" class="masked">
-        <label class="row" style="font-weight:500; margin-top:8px"><input type="checkbox" id="fj-show-clue" style="width:auto"> Show clue and response while typing</label>
+        <label class="row" style="font-weight:700; margin-top:8px"><input type="checkbox" id="fj-show-clue"> Show clue and response while typing</label>
       </div>
       <div id="fj-setup-err" class="err hidden"></div>
       <div class="host-actions">
@@ -430,7 +549,7 @@
     </div>
     <div id="fj-live" class="hidden">
       <div class="fj-board">
-        <div class="fj-label">Final Jeopardy</div>
+        <div class="fj-label">Final Round</div>
         <div id="fjh-category" class="fj-cat"></div>
         <div id="fjh-clue" class="fj-clue hidden"></div>
         <div id="fjh-timer-wrap" class="hidden"><div id="fjh-timer" class="fj-timer">32</div><div class="fj-bar"><div id="fjh-bar"></div></div></div>
@@ -444,11 +563,11 @@
         <button id="fjh-edit" class="secondary">Edit category / clue</button>
         <button id="fjh-skip" class="secondary">End timer now</button>
       </div>
-      <div class="host-actions" style="align-items:center">
-        <label class="row" style="font-weight:500; margin:0; flex:1"><input type="checkbox" id="fj-music" checked style="width:auto"> Play thinking music</label>
-        <button id="fjh-exit" class="secondary tv-control">Finish Final Jeopardy</button>
+      <div class="host-actions tv-control" style="align-items:center">
+        <label class="row" style="font-weight:700; margin:0; flex:1"><input type="checkbox" id="fj-music" checked> Play thinking music</label>
+        <button id="fjh-exit" class="secondary tv-control">Finish Final Round</button>
       </div>
-      <div class="music-row">
+      <div class="music-row tv-control">
         <div class="grow">Music: <strong id="fj-music-name">Built-in tune</strong>
           <div class="muted" id="fj-music-note" style="font-size:14px">Want your own? Choose an audio file on this device. It's never uploaded anywhere.</div></div>
         <input type="file" id="fj-music-file" accept="audio/*,.mp3,.m4a,.aac,.wav,.ogg" class="hidden">
@@ -458,6 +577,40 @@
       </div>
     </div>
   </div>
+
+  <!-- Host menu: setup tools, tucked away so the TV stays clean -->
+  <div id="drawer-scrim" class="scrim hidden"></div>
+  <aside id="drawer" class="drawer" aria-label="Host menu" aria-hidden="true">
+    <div class="drawer-head"><h3>Host menu</h3><button id="drawer-close" class="x" title="Close">×</button></div>
+    <div class="dsec">
+      <h2>Host remote</h2>
+      <p>Run the game from your phone. It shows the correct responses; this screen never does.</p>
+      <button id="remote-btn" class="big">📱 Connect host remote</button>
+    </div>
+    <div class="dsec">
+      <h2>Play a board</h2>
+      <select id="gl-select"></select>
+      <button id="gl-start" class="big btn-ok">▶ Play this board</button>
+      <div class="row"><button id="gl-file" class="secondary grow">Open board file…</button><a href="editor.html" class="btn secondary grow" target="_blank" rel="noopener">✏️ Board editor</a></div>
+      <input type="file" id="gl-file-in" accept=".json,application/json" class="hidden">
+    </div>
+    <div class="dsec">
+      <h2>Final Round</h2>
+      <p class="hint">The last question: everyone bets, then has 32 seconds to answer.</p>
+      <button id="fj-open" class="secondary big">🏆 Final Round</button>
+    </div>
+    <div class="dsec">
+      <h2>Buzzer settings</h2>
+      <label class="row"><input type="checkbox" id="jeopardy" checked>
+        <span>Fair-start rules<br><span class="hint">New questions start locked while you read. Buzzing before you open the buzzers locks that player out for ¼ second.</span></span></label>
+      <label class="row"><input type="checkbox" id="host-sound" checked> <span>Buzzer sounds and sound effects on this screen</span></label>
+    </div>
+    <div class="dsec">
+      <h2>Room</h2>
+      <p class="hint">A new room gets a new code. Everyone has to join again.</p>
+      <button id="new-room" class="secondary big">New room</button>
+    </div>
+  </aside>
 </section>
 
 <dialog id="remote-dialog">
@@ -480,11 +633,11 @@
 <!-- ============ HOST REMOTE (host's phone) ============ -->
 <section id="view-remote" class="wrap hidden">
   <div class="r-top">
-    <h1>Host remote</h1>
+    <div class="r-title"><span class="logo sm">BUZZERS</span><span>Host remote</span></div>
     <span class="pill"><span id="r-dot" class="dot"></span><span id="r-conn">Connecting…</span></span>
   </div>
-  <p class="muted" id="r-room" style="margin:0 0 6px"></p>
-  <label class="row hidden" id="r-sound-wrap" style="font-weight:500; margin:0 0 14px"><input type="checkbox" id="r-sound" style="width:auto"> Buzzer sounds and sound effects on the game screen</label>
+  <p class="muted" id="r-room" style="margin:0 0 6px; font-weight:700"></p>
+  <label class="row hidden" id="r-sound-wrap" style="font-weight:700; margin:0 0 14px"><input type="checkbox" id="r-sound"> Buzzer sounds and sound effects on the game screen</label>
   <div id="r-wait" class="card empty">Connecting to the game screen…</div>
 
   <div id="r-main" class="stack hidden">
@@ -497,20 +650,20 @@
         <div id="r-order-empty" class="empty"></div>
       </div>
     </div>
-    <div class="card">
-      <h2>Players (<span id="r-count">0</span>)</h2>
-      <ul id="r-players" class="players"></ul>
-      <div id="r-players-empty" class="empty">No one has joined yet.</div>
-      <label class="row" style="font-weight:500; margin-top:12px; align-items:flex-start"><input type="checkbox" id="r-jeopardy" style="width:auto; margin-top:4px">
-        <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked; buzzing early locks a player out for ¼ second.</span></span></label>
-    </div>
-    <button id="r-fj-open" class="big secondary">🏆 Final Jeopardy</button>
     <div class="card stack">
       <h2>Play a board</h2>
       <div id="r-boards-none" class="muted">No boards on the game screen yet. Write one in the board editor on that device (✏️ on its home page), or open a board file there.</div>
       <select id="r-board-select"></select>
-      <button id="r-board-start" class="big">▶ Play this board</button>
+      <button id="r-board-start" class="big btn-ok">▶ Play this board</button>
     </div>
+    <div class="card">
+      <h2>Players (<span id="r-count">0</span>)</h2>
+      <ul id="r-players" class="players"></ul>
+      <div id="r-players-empty" class="empty">No one has joined yet.</div>
+      <label class="row" style="font-weight:700; margin-top:12px; align-items:flex-start"><input type="checkbox" id="r-jeopardy" style="margin-top:2px">
+        <span>Fair-start rules<br><span class="muted" style="font-size:14px; font-weight:600">New questions start locked while you read; buzzing early locks a player out for ¼ second.</span></span></label>
+    </div>
+    <button id="r-fj-open" class="big secondary">🏆 Final Round</button>
   </div>
 
   <div id="r-game" class="stack hidden">
@@ -522,7 +675,7 @@
       <button id="r-g-restart" class="big secondary">Play this board again (scores reset)</button>
     </div>
     <div class="card stack hidden" id="r-g-clue">
-      <div class="r-key"><div class="lbl" id="r-g-c-top"></div><div class="val" id="r-g-c-text" style="font-weight:500"></div></div>
+      <div class="r-key"><div class="lbl" id="r-g-c-top"></div><div class="val" id="r-g-c-text" style="font-weight:600"></div></div>
       <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-g-c-resp"></div></div>
       <div id="r-g-c-status" class="fj-msg"></div>
       <div id="r-g-dd" class="stack hidden">
@@ -538,9 +691,9 @@
       <button id="r-g-cancel" class="linklike">Put this clue back on the board</button>
     </div>
     <div class="card stack" id="r-g-boardwrap">
-      <div class="row" style="justify-content:space-between"><h2 id="r-g-title" style="margin:0"></h2><span class="muted" id="r-g-roundlbl"></span></div>
+      <div class="row" style="justify-content:space-between"><h2 id="r-g-title" style="margin:0"></h2><span class="muted" id="r-g-roundlbl" style="font-weight:800"></span></div>
       <div id="r-g-board" class="gboard mini"></div>
-      <div class="muted" id="r-g-hint" style="font-size:14px"></div>
+      <div class="muted" id="r-g-hint" style="font-size:14px; font-weight:700"></div>
     </div>
     <div class="card">
       <h2>Scores</h2>
@@ -548,17 +701,17 @@
       <div class="host-actions"><button id="r-g-undo" class="secondary">Undo last ruling</button></div>
     </div>
     <button id="r-g-round" class="big secondary"></button>
-    <button id="r-g-fj" class="big secondary">🏆 Final Jeopardy</button>
+    <button id="r-g-fj" class="big secondary">🏆 Final Round</button>
     <button id="r-g-finish" class="big secondary">🏁 Show the winner</button>
     <button id="r-g-end" class="big secondary">End board game</button>
   </div>
 
   <div id="r-fj" class="stack hidden">
     <form id="r-fj-setup" class="card stack hidden" novalidate>
-      <h2>Final Jeopardy</h2>
+      <h2>Final Round</h2>
       <div><label for="r-fj-cat-in">Category</label><input id="r-fj-cat-in" maxlength="80" autocomplete="off"></div>
       <div><label for="r-fj-clue-in">Clue</label><textarea id="r-fj-clue-in" rows="3" maxlength="400" autocomplete="off"></textarea></div>
-      <div><label for="r-fj-resp-in">Correct response <span class="muted" style="font-weight:500">(only you see this)</span></label><input id="r-fj-resp-in" maxlength="160" autocomplete="off"></div>
+      <div><label for="r-fj-resp-in">Correct response <span class="muted" style="font-weight:600">(only you see this)</span></label><input id="r-fj-resp-in" maxlength="160" autocomplete="off"></div>
       <div id="r-fj-err" class="err hidden"></div>
       <button type="submit" class="big btn-ok">Show category &amp; take bets</button>
       <button type="button" id="r-fj-cancel" class="secondary">Cancel</button>
@@ -566,9 +719,9 @@
     <div id="r-fj-live" class="stack hidden">
       <div class="card stack">
         <div class="r-key"><div class="lbl">Category</div><div class="val" id="r-fj-cat"></div></div>
-        <div class="r-key"><div class="lbl">Clue <span id="r-fj-clue-note"></span></div><div class="val" id="r-fj-clue" style="font-weight:500"></div></div>
+        <div class="r-key"><div class="lbl">Clue <span id="r-fj-clue-note"></span></div><div class="val" id="r-fj-clue" style="font-weight:600"></div></div>
         <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-fj-resp"></div></div>
-        <div id="r-fj-timer" class="fj-timer hidden" style="text-align:center; color:var(--warn)"></div>
+        <div id="r-fj-timer" class="fj-timer hidden" style="text-align:center; color:var(--accent); text-shadow:none"></div>
       </div>
       <div class="card">
         <h2 id="r-fj-chips-title"></h2>
@@ -578,8 +731,8 @@
       <button id="r-fj-start" class="big btn-ok">Reveal clue &amp; start 32 seconds</button>
       <button id="r-fj-edit" class="secondary">Edit category / clue</button>
       <button id="r-fj-skip" class="secondary">End timer now</button>
-      <label class="row" style="font-weight:500"><input type="checkbox" id="r-fj-music" style="width:auto"> Play thinking music on the game screen <span class="muted" id="r-fj-music-name"></span></label>
-      <button id="r-fj-exit" class="secondary">Finish Final Jeopardy</button>
+      <label class="row" style="font-weight:700"><input type="checkbox" id="r-fj-music"> Play thinking music on the game screen <span class="muted" id="r-fj-music-name"></span></label>
+      <button id="r-fj-exit" class="secondary">Finish Final Round</button>
     </div>
   </div>
 </section>
@@ -741,7 +894,7 @@
     { id: 'robot',   name: 'Robot',          play: () => { [300, 200, 400, 250].forEach((f, i) => tone(f, i * .09, .09, 'square', .2)); } },
     { id: 'whistle', name: 'Slide whistle',  play: () => tone(500, 0, .6, 'sine', .35, 2000) },
   ];
-  // Original "thinking" tune (stretched to the clock length) for Final Jeopardy (composed here, not the TV theme):
+  // Original "thinking" tune (stretched to the clock length) for Final Round (composed here, not the TV theme):
   // a ticking clock over a D–Bm–G–A progression, ending with a "time's up" sting.
   function playThinkMusic(seconds) {
     const a = audio(), out = a.createGain();
@@ -874,7 +1027,7 @@
 
     let client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
     let left = false, kicked = false, hostOnline = null, state = null, lastJoin = 0, pendingBuzz = false; // pendingBuzz: round number of a buzz the host hasn't confirmed yet
-    // Jeopardy rule: pressing before the buzzers open locks this player out for LOCKOUT_MS.
+    // Fair-start rule: pressing before the buzzers open locks this player out for LOCKOUT_MS.
     const LOCKOUT_MS = 250;
     let lockUntil = 0, lockTimer = null, btnMode = 'off'; // btnMode: off | wait | lockout | ready
     const lockedOut = () => performance.now() < lockUntil;
@@ -895,7 +1048,7 @@
       send({ t: 'join', name: me.name, sound: me.sound });
     }
 
-    // ---- Final Jeopardy (player side)
+    // ---- Final Round (player side)
     let fjEnd = 0, fjMine = store.get('buzzer-fj') || {}, fjLastSend = 0, fjAnswerTimer = null;
     const fjSave = () => store.set('buzzer-fj', fjMine);
     function fjFor(fj) { if (fjMine.id !== fj.id) { fjMine = { id: fj.id }; fjSave(); $('fjp-answer').value = ''; $('fjp-score').value = ''; $('fjp-bet').value = ''; } return fjMine; }
@@ -914,7 +1067,7 @@
       if (inGame) $('fjp-score').value = myScore;
       if (inGame && !(fj.eligible || []).includes(me_)) {
         for (const id of ['fjp-bet-form', 'fjp-bet-done', 'fjp-answer-wrap']) $(id).classList.add('hidden');
-        $('fjp-msg').textContent = 'You need more than $0 to play Final Jeopardy. Enjoy the show!';
+        $('fjp-msg').textContent = 'You need more than $0 to play Final Round. Enjoy the show!';
         renderFjTimer(); return;
       }
       const betting = fj.stage === 'betting';
@@ -983,7 +1136,7 @@
 
     function render() {
       const btn = $('buzzer'), st = $('status'), sub = $('status-sub');
-      // Final Jeopardy takes over the screen while it's running.
+      // Final Round takes over the screen while it's running.
       const fj = !kicked && isConnected() && hostOnline !== false && state && state.fj && joined() ? state.fj : null;
       $('fj-player').classList.toggle('hidden', !fj);
       document.querySelector('#view-player .buzzer-area').classList.toggle('hidden', !!fj);
@@ -1015,8 +1168,8 @@
       $('p-clue').classList.toggle('hidden', !cl);
       document.querySelector('#view-player .buzzer-area').classList.toggle('with-clue', !!cl);
       if (cl) {
-        $('p-clue-top').textContent = cl.dd ? `${cl.category} · Daily Double` : `${cl.category} · ${money(cl.value)}`;
-        $('p-clue-text').textContent = cl.text || (cl.dd ? 'Daily Double!' : '');
+        $('p-clue-top').textContent = cl.dd ? `${cl.category} · Double Down` : `${cl.category} · ${money(cl.value)}`;
+        $('p-clue-text').textContent = cl.text || (cl.dd ? 'Double Down!' : '');
       }
       if (game) {
         const nm = (id) => (game.names && game.names[id]) || 'Someone';
@@ -1041,19 +1194,19 @@
           }
           return;
         }
-        if (cl.dd) { // Daily Double: only one player, who wagers first; no buzzers
+        if (cl.dd) { // Double Down: only one player, who wagers first; no buzzers
           const dd = cl.dd, mine = dd.player === me.clientId;
           const formOn = mine && !dd.revealed && dd.wager == null;
           if (ddKey !== cl.key) { ddKey = cl.key; $('p-dd-wager').value = ''; $('p-dd-err').classList.add('hidden'); }
           $('p-dd').classList.toggle('hidden', !formOn); btn.classList.toggle('hidden', formOn);
           if (formOn) $('p-dd-label').textContent = `Your wager: ${money(dd.min)} to ${money(dd.max)}`;
           if (!dd.revealed) {
-            st.textContent = !dd.player ? 'Daily Double!' : mine ? (dd.wager == null ? 'Daily Double! Make your wager' : `You wagered ${money(dd.wager)}`)
-              : (dd.wager == null ? `Daily Double! ${nm(dd.player)} is making a wager` : `${nm(dd.player)} wagered ${money(dd.wager)}`);
+            st.textContent = !dd.player ? 'Double Down!' : mine ? (dd.wager == null ? 'Double Down! Make your wager' : `You wagered ${money(dd.wager)}`)
+              : (dd.wager == null ? `Double Down! ${nm(dd.player)} is making a wager` : `${nm(dd.player)} wagered ${money(dd.wager)}`);
             sub.textContent = !dd.player ? 'The host is choosing who plays it.' : mine ? 'Only you can answer this one.' : 'Only they can answer this one.';
           } else {
             btn.classList.toggle('mine', mine);
-            st.textContent = mine ? 'Your Daily Double: answer now 🎤' : `${nm(dd.player)} is answering the Daily Double`;
+            st.textContent = mine ? 'Your Double Down: answer now 🎤' : `${nm(dd.player)} is answering the Double Down`;
             sub.textContent = `Wager: ${money(dd.wager)}`;
           }
           return;
@@ -1104,7 +1257,7 @@
       const btn = $('buzzer');
       if (btnMode === 'off' || !isConnected() || !state) return;
       if (!state.armed) {
-        // Early press (Jeopardy rules): lock out for ¼ second; another early press restarts it.
+        // Early press (Fair-start rules): lock out for ¼ second; another early press restarts it.
         if (btnMode !== 'wait' && btnMode !== 'lockout') return;
         lockUntil = performance.now() + LOCKOUT_MS;
         if (navigator.vibrate) navigator.vibrate(30);
@@ -1224,13 +1377,15 @@
 
     const joinUrl = () => linkFor(hs.code);
     function renderHead() {
-      $('room-code').textContent = fmtCode(hs.code);
+      $('room-code').textContent = fmtCode(hs.code); $('room-code-mini').textContent = fmtCode(hs.code);
       const url = joinUrl();
       $('join-url').textContent = url.replace(/^https?:\/\//, '');
-      $('qr').innerHTML = '';
-      if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
-      else $('qr').classList.add('hidden');
-      document.title = `Buzzer · ${fmtCode(hs.code)}`;
+      $('qr').innerHTML = ''; $('qr-mini').innerHTML = '';
+      if (window.qrcode) {
+        const q = qrcode(0, 'M'); q.addData(url); q.make();
+        $('qr').innerHTML = $('qr-mini').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+      } else { $('qr').classList.add('hidden'); $('qr-mini').classList.add('hidden'); }
+      document.title = `Buzzers · ${fmtCode(hs.code)}`;
     }
     const isOnline = (id) => lastSeen.has(id) && Date.now() - lastSeen.get(id) < OFFLINE_AFTER_MS;
     function renderOrder() {
@@ -1285,7 +1440,7 @@
     const pname = (id) => (hs.players[id] && hs.players[id].name) || 'Someone';
     function answerer() {
       const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done') return null;
-      if (cl.dd) return cl.dd.revealed ? cl.dd.player : null; // Daily Double: only that player answers
+      if (cl.dd) return cl.dd.revealed ? cl.dd.player : null; // Double Down: only that player answers
       const o = hs.order.find((x) => !cl.tried.includes(x.id)); return o ? o.id : null;
     }
     const controlsHere = () => !remoteOn() || document.body.classList.contains('controls-forced');
@@ -1327,17 +1482,17 @@
       if (at.r !== g.round || !at.q || !at.q.clue.trim() || g.used[key]) return;
       g.clue = { key, stage: 'live', tried: [], lastWrong: null, result: null };
       if (at.q.dailyDouble) {
-        // Daily Double: the player in control wagers, then answers alone. No buzzers.
+        // Double Down: the player in control wagers, then answers alone. No buzzers.
         g.clue.dd = { player: g.control && hs.players[g.control] ? g.control : null, wager: null, revealed: false };
         hs.order = []; hs.round++; hs.armed = false; changed();
         if ($('host-sound').checked) { try { soundById('fanfare').play(); } catch {} }
         return;
       }
-      // With Jeopardy rules the buzzers stay locked while the host reads.
+      // With Fair-start rules the buzzers stay locked while the host reads.
       hs.order = []; hs.round++; hs.armed = !hs.jeopardy; changed();
       sfx('clue');
     }
-    // Daily Double wager limits: at least $5, up to the player's score or the round's top value, whichever is more.
+    // Double Down wager limits: at least $5, up to the player's score or the round's top value, whichever is more.
     function ddLimits(id) {
       const g = hs.game, score = (id && g.scores[id]) || 0;
       const vals = g.board.rounds[g.round].categories.flatMap((c) => c.clues).filter((q) => q.clue.trim()).map((q) => q.value);
@@ -1462,7 +1617,7 @@
       if (cl) {
         const { cat, q } = clueAt(cl.key);
         out.clue = { key: cl.key, category: cat.name, value: q.value, text: cl.dd && !cl.dd.revealed ? '' : q.clue, stage: cl.stage, tried: cl.tried, answerer: answerer(),
-          dd: cl.dd ? { ...cl.dd, ...ddLimits(cl.dd.player) } : null, // the Daily Double clue stays hidden until it's revealed
+          dd: cl.dd ? { ...cl.dd, ...ddLimits(cl.dd.player) } : null, // the Double Down clue stays hidden until it's revealed
           lastWrong: cl.lastWrong, result: cl.result, response: cl.stage === 'done' ? q.response : '' }; // the response only after the clue is over
       }
       return out;
@@ -1506,8 +1661,8 @@
       if (cl) {
         const { cat, q } = clueAt(cl.key), stEl = $('gt-c-status'), r = cl.result;
         const dd = cl.dd, ddHidden = !!dd && !dd.revealed;
-        $('gt-c-top').textContent = dd ? `${cat.name} · Daily Double` : `${cat.name} · ${money(q.value)}`;
-        $('gt-c-text').textContent = ddHidden ? 'Daily Double!' : q.clue;
+        $('gt-c-top').textContent = dd ? `${cat.name} · Double Down` : `${cat.name} · ${money(q.value)}`;
+        $('gt-c-text').textContent = ddHidden ? 'Double Down!' : q.clue;
         $('gt-c-text').classList.toggle('gc-dd', ddHidden);
         stEl.classList.toggle('who', !!ans);
         if (ddHidden) stEl.textContent = !dd.player ? 'Who will play it?' : dd.wager == null ? `${pname(dd.player)} is making a wager…` : `${pname(dd.player)} wagers ${money(dd.wager)}`;
@@ -1525,7 +1680,7 @@
         const v = g.scores[p.id] || 0, d = document.createElement('div');
         const choosing = cl && cl.dd && !cl.dd.player && cl.stage !== 'done' && controlsHere();
         d.className = 'gscore' + (g.control === p.id ? ' ctrl' : '') + (ans === p.id ? ' ans' : '') + (choosing ? ' pickable' : '');
-        if (choosing) { d.title = 'Click to give this player the Daily Double'; d.onclick = () => gameDdPlayer(p.id); }
+        if (choosing) { d.title = 'Click to give this player the Double Down'; d.onclick = () => gameDdPlayer(p.id); }
         d.innerHTML = '<div class="n"></div><div class="s"></div>';
         d.querySelector('.n').textContent = p.name; d.querySelector('.s').textContent = money(v);
         d.querySelector('.s').classList.toggle('neg', v < 0);
@@ -1584,7 +1739,7 @@
     // Boards edited in another tab (the board editor) show up here straight away.
     window.addEventListener('storage', (e) => { if (e.key === BOARDS_KEY) { renderBoardPicker(); publishHostState(true); } });
 
-    // ---- Final Jeopardy (host side)
+    // ---- Final Round (host side)
     // hs.fj = { id, stage: 'betting' | 'clue' | 'reveal', category, clue, endsAt,
     //           bets: {id: {score, bet}}, answers: {id: text}, reveal: {id: {shown, correct}} }
     let fjEditing = false, stopMusic = null, lastFjBroadcast = 0;
@@ -1606,14 +1761,15 @@
       };
     }
     const fjPlayers = () => Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
-    // In a board game only players with more than $0 play Final Jeopardy, like the show.
-    // Who plays is fixed when Final Jeopardy starts, so nobody drops off the list during the reveal.
+    // In a board game only players with more than $0 play Final Round, like the show.
+    // Who plays is fixed when Final Round starts, so nobody drops off the list during the reveal.
     const fjList = () => (hs.fj && hs.fj.eligible ? fjPlayers().filter((p) => hs.fj.eligible.includes(p.id))
       : hs.game ? fjPlayers().filter((p) => (hs.game.scores[p.id] || 0) > 0) : fjPlayers());
     function renderFj() {
       const f = hs.fj, on = !!f || fjEditing;
       $('host-main').classList.toggle('hidden', on || !!hs.game);
       $('game-tv').classList.toggle('hidden', on || !hs.game);
+      document.body.classList.toggle('lobby-on', !on && !hs.game); // the big join code is showing
       $('fj-host').classList.toggle('hidden', !on);
       if (!on) return;
       const editing = fjEditing || !f;
@@ -1746,7 +1902,7 @@
       setTimeout(() => { if (stopPreview === me) { stopPreview = null; $('fj-music-preview').textContent = '▶ Preview'; } }, FJ_MS);
     };
 
-    // Final Jeopardy actions. The TV's buttons and the host remote both use these.
+    // Final Round actions. The TV's buttons and the host remote both use these.
     function fjSetup(category, clue, response) {
       category = String(category || '').trim().slice(0, 80); clue = String(clue || '').trim().slice(0, 400); response = String(response || '').trim().slice(0, 160);
       if (!category || !clue) return false;
@@ -1810,7 +1966,7 @@
     $('fj-music').onchange = () => { if (!$('fj-music').checked && stopMusic) { stopMusic(); stopMusic = null; } publishHostState(true); };
     $('fjh-skip').onclick = fjSkip;
     $('fjh-exit').onclick = () => {
-      if (hs.fj && hs.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+      if (hs.fj && hs.fj.stage !== 'reveal' && !confirm('End Final Round and go back to the buzzer?')) return;
       fjExit();
     };
 
@@ -1899,6 +2055,17 @@
       $('remote-qr').innerHTML = '';
       if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(remoteUrl()); q.make(); $('remote-qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
     }
+    // ---- Host menu (drawer)
+    function setDrawer(open) {
+      $('drawer').classList.toggle('open', open); $('drawer').setAttribute('aria-hidden', String(!open));
+      $('drawer-scrim').classList.toggle('hidden', !open);
+      if (open) { renderBoardPicker(); setTimeout(() => $('drawer-close').focus(), 50); }
+    }
+    $('drawer-btn').onclick = () => setDrawer(!$('drawer').classList.contains('open'));
+    $('drawer-close').onclick = $('drawer-scrim').onclick = () => setDrawer(false);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('drawer').classList.contains('open')) setDrawer(false); });
+    // Anything in the menu that changes what's on screen also closes the menu.
+    for (const id of ['remote-btn', 'gl-start', 'fj-open', 'new-room']) $(id).addEventListener('click', () => setDrawer(false));
     $('remote-btn').onclick = () => { renderRemoteQr(); $('remote-dialog').showModal(); };
     $('remote-close').onclick = () => $('remote-dialog').close();
     $('remote-copy').onclick = async () => {
@@ -1915,7 +2082,7 @@
     };
     $('controls-toggle').onclick = () => { document.body.classList.toggle('controls-forced'); renderRemote(); };
 
-    // New question: clear the order. With Jeopardy rules the buzzers stay locked until the host opens them.
+    // New question: clear the order. With Fair-start rules the buzzers stay locked until the host opens them.
     function reset() { hs.order = []; hs.armed = !hs.jeopardy; hs.round++; changed(); }
     function toggleLock() { hs.armed = !hs.armed; changed(); }
     function kick(id) {
@@ -2013,8 +2180,9 @@
     // Let go of focus after clicking, so the space bar doesn't also "click" the last button pressed.
     for (const b of document.querySelectorAll('#view-host button, #view-host input[type=checkbox]')) b.addEventListener('click', () => setTimeout(() => b.blur(), 0));
     document.addEventListener('keydown', (e) => {
-      if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.target.tagName === 'TEXTAREA' || e.repeat) return;
-      if (hs.fj || fjEditing) return; // buzzer shortcuts are off during Final Jeopardy
+      if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.repeat) return;
+      if ($('drawer').classList.contains('open') || $('remote-dialog').open) return; // the host menu is open
+      if (hs.fj || fjEditing) return; // buzzer shortcuts are off during Final Round
       if (hs.game) { if (e.code === 'Space') { e.preventDefault(); gameOpen(); } return; }
       if (e.code === 'Space') { e.preventDefault(); toggleLock(); }
       if (e.key === 'n' || e.key === 'N') reset();
@@ -2068,7 +2236,7 @@
       if (!conn) wait = 'Connecting…';
       else if (tvOnline === false) wait = 'The game screen is offline. Check that its page is still open.';
       else if (!haveGame) wait = Date.now() - connectedAt > 6000
-        ? 'Can\'t reach the game. Open "📱 Host remote" on the game screen and scan its code again.'
+        ? 'Can\'t reach the game. On the game screen, open ☰ Host menu → 📱 Connect host remote and scan the code again.'
         : 'Connecting to the game screen…';
       $('r-wait').textContent = wait;
       $('r-wait').classList.toggle('hidden', !wait);
@@ -2114,15 +2282,15 @@
       if (cl) {
         const [r, c, i] = cl.key.split('-').map(Number), cat = G.board.rounds[r].categories[c], q = cat.clues[i];
         const dd = cl.dd;
-        $('r-g-c-top').textContent = `${cat.name} · ${money(q.value)}` + (dd ? ' · DAILY DOUBLE' : '');
+        $('r-g-c-top').textContent = `${cat.name} · ${money(q.value)}` + (dd ? ' · DOUBLE DOWN' : '');
         $('r-g-c-text').textContent = q.clue + (dd && !dd.revealed ? '  (hidden from players until you reveal it)' : '');
         $('r-g-c-resp').textContent = q.response || '(none written)';
-        // Daily Double: who plays it, their wager, then reveal
+        // Double Down: who plays it, their wager, then reveal
         $('r-g-dd').classList.toggle('hidden', !dd || !live || dd.revealed);
         if (dd && live && !dd.revealed) {
           const pick = $('r-g-dd-pick'); pick.innerHTML = '';
           if (!dd.player) {
-            const h = document.createElement('div'); h.className = 'muted'; h.textContent = 'No one has control yet. Who plays this Daily Double?'; pick.appendChild(h);
+            const h = document.createElement('div'); h.className = 'muted'; h.textContent = 'No one has control yet. Who plays this Double Down?'; pick.appendChild(h);
             for (const p of g.players) { const b = document.createElement('button'); b.className = 'secondary'; b.textContent = `${p.name} plays it`; b.onclick = () => cmd({ cmd: 'game-dd-player', id: p.id }); pick.appendChild(b); }
           }
           $('r-g-dd-wagerrow').classList.toggle('hidden', !dd.player);
@@ -2134,7 +2302,7 @@
         const res = cl.result;
         let status = '';
         if (!live) status = res.pass ? 'No one got it' : res.correct ? `✓ ${nm(res.id)} ${money(res.delta)}` : `✗ ${nm(res.id)} ${money(res.delta)}` + (res.dd ? '' : '. No one else left');
-        else if (dd && !dd.revealed) status = 'Daily Double!';
+        else if (dd && !dd.revealed) status = 'Double Down!';
         else if (dd) status = `${nm(dd.player)} is answering · wager ${money(dd.wager)}`;
         else if (ans) status = `${nm(ans)} buzzed in`;
         else if (g.armed) status = cl.lastWrong ? `✗ ${nm(cl.lastWrong.id)} ${money(cl.lastWrong.delta)}. Buzzers open for everyone else…` : 'Buzzers open. Waiting for a buzz…';
@@ -2143,7 +2311,7 @@
         $('r-g-open').classList.toggle('hidden', !live || !!dd || g.armed || !!ans);
         $('r-g-judge').classList.toggle('hidden', !ans);
         const v = dd ? dd.wager : q.value;
-        $('r-g-right').textContent = `✓ Right +${money(v || 0)}`; $('r-g-wrong').textContent = `✗ Wrong −${money(v || 0)}`;
+        $('r-g-right').textContent = `✓ Right\n+${money(v || 0)}`; $('r-g-wrong').textContent = `✗ Wrong\n−${money(v || 0)}`;
         $('r-g-pass').classList.toggle('hidden', !live || !!dd);
         $('r-g-back').classList.toggle('hidden', !!live);
         $('r-g-cancel').classList.toggle('hidden', !live || cl.tried.length > 0 || !!(dd && dd.revealed));
@@ -2355,7 +2523,7 @@
     $('r-fj-skip').onclick = () => cmd({ cmd: 'fj-skip' });
     $('r-fj-music').onchange = () => cmd({ cmd: 'fj-music', on: $('r-fj-music').checked });
     $('r-fj-exit').onclick = () => {
-      if (g.fj && g.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+      if (g.fj && g.fj.stage !== 'reveal' && !confirm('End Final Round and go back to the buzzer?')) return;
       cmd({ cmd: 'fj-exit' });
     };
 
