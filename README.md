@@ -65,7 +65,9 @@ Open **✏️ Write question boards** from the home page. A board has **Round 1*
 
 Players never receive the board. Each phone gets only the clue being played, and the correct response only once that clue is over. Without a host remote, the game screen's own controls work too, but it can't show correct responses, because everyone can see that screen.
 
-Not yet: Daily Doubles (they play as normal clues for now) and using the game scores in Final Jeopardy. Both are coming next.
+**Daily Doubles:** when the host taps one, the TV shows **DAILY DOUBLE!** with a fanfare, and the clue stays hidden from everyone. The player in control wagers on their phone: at least $5, up to their score or the round's top value, whichever is higher. The host can also type the wager on the remote, and choose who plays it if no one has control yet. Then **Reveal the clue**. Only that player answers (no buzzers), **✓ / ✗** adds or subtracts the wager, and they keep control either way.
+
+**Final Jeopardy in a board game:** players don't type their score; their phone shows it and caps the bet at that amount. Anyone at $0 or below sits it out. Who plays is fixed when Final Jeopardy starts. Each **✓ / ✗** in the reveal goes straight onto the scoreboard (and comes off again on **Undo**). **Finish Final Jeopardy** returns to the board with the final totals.
 
 ## Putting it online for free (GitHub Pages)
 

@@ -157,6 +157,9 @@
   .gc-text { font-family: Georgia, "Times New Roman", serif; font-size: clamp(26px, 4.2vw, 60px); text-transform: uppercase; line-height: 1.25; margin: 20px 0; overflow-wrap: anywhere; }
   .gc-status { font-size: clamp(22px, 3vw, 40px); font-weight: 800; color: #ffd54a; min-height: 1.3em; }
   .gc-status.who { font-size: clamp(34px, 5vw, 72px); }
+  .gc-dd { font-size: clamp(48px, 9vw, 130px); font-weight: 900; color: #ffd54a; letter-spacing: .04em; text-shadow: 4px 4px 0 #000; line-height: 1; animation: ddpop .6s ease-out; }
+  @keyframes ddpop { from { transform: scale(.3) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .gscore.pickable { cursor: pointer; outline: 2px dashed var(--gold); }
   .gc-resp { margin-top: 14px; font-size: clamp(18px, 2.2vw, 30px); }
   .gscores { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 12px; }
   .gscore { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 16px; text-align: center; min-width: 110px; }
@@ -259,6 +262,11 @@
     </div>
     <div class="buzzer-area">
       <div id="p-clue" class="pclue hidden"><div class="pc-top" id="p-clue-top"></div><div class="pc-text" id="p-clue-text"></div></div>
+      <form id="p-dd" class="card stack hidden" novalidate style="width:100%; max-width:520px">
+        <div><label for="p-dd-wager" id="p-dd-label">Your wager</label><input id="p-dd-wager" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 1000"></div>
+        <div id="p-dd-err" class="err hidden"></div>
+        <button class="big" type="submit">Lock in wager</button>
+      </form>
       <button id="buzzer" disabled>BUZZ</button>
       <div id="status">Connecting…</div>
       <div id="status-sub"></div>
@@ -271,8 +279,8 @@
         <div id="fjp-timer-wrap" class="hidden"><div id="fjp-timer" class="fj-timer">32</div><div class="fj-bar"><div id="fjp-bar"></div></div></div>
       </div>
       <form id="fjp-bet-form" class="card stack hidden" novalidate>
-        <div><label for="fjp-score">Your current score</label><input id="fjp-score" type="number" inputmode="numeric" step="1" placeholder="e.g. 4200"></div>
-        <div><label for="fjp-bet">Your bet (0 up to your score)</label><input id="fjp-bet" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 2000"></div>
+        <div id="fjp-score-wrap"><label for="fjp-score">Your current score</label><input id="fjp-score" type="number" inputmode="numeric" step="1" placeholder="e.g. 4200"></div>
+        <div><label for="fjp-bet" id="fjp-bet-label">Your bet (0 up to your score)</label><input id="fjp-bet" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g. 2000"></div>
         <div id="fjp-bet-err" class="err hidden"></div>
         <button class="big" type="submit">Lock in bet</button>
       </form>
@@ -360,6 +368,8 @@
     <div id="gt-scores" class="gscores"></div>
     <div class="host-actions tv-control">
       <button id="gt-open" class="btn-ok">Open buzzers (space)</button>
+      <button id="gt-dd-wager" class="secondary">Set wager…</button>
+      <button id="gt-dd-reveal" class="btn-ok">Reveal the clue</button>
       <button id="gt-right" class="btn-ok">✓ Right</button>
       <button id="gt-wrong" class="btn-bad">✗ Wrong</button>
       <button id="gt-pass" class="secondary">No one got it</button>
@@ -481,6 +491,12 @@
       <div class="r-key"><div class="lbl" id="r-g-c-top"></div><div class="val" id="r-g-c-text" style="font-weight:500"></div></div>
       <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-g-c-resp"></div></div>
       <div id="r-g-c-status" class="fj-msg"></div>
+      <div id="r-g-dd" class="stack hidden">
+        <div id="r-g-dd-pick" class="stack"></div>
+        <div class="row" id="r-g-dd-wagerrow"><input id="r-g-dd-wager" type="number" inputmode="numeric" min="0" step="1" placeholder="Wager" style="flex:1"><button id="r-g-dd-set" class="secondary">Set wager</button></div>
+        <div class="muted" id="r-g-dd-note" style="font-size:14px"></div>
+        <button id="r-g-dd-reveal" class="big btn-ok">Reveal the clue</button>
+      </div>
       <button id="r-g-open" class="big open-now">Open buzzers</button>
       <div class="row" id="r-g-judge"><button id="r-g-right" class="big btn-ok" style="flex:1"></button><button id="r-g-wrong" class="big btn-bad" style="flex:1"></button></div>
       <button id="r-g-pass" class="secondary">No one got it · show the response</button>
@@ -834,6 +850,15 @@
       $('fjp-category').textContent = fj.category;
       $('fjp-clue').textContent = fj.clue || ''; $('fjp-clue').classList.toggle('hidden', !fj.clue);
       $('fjp-timer-wrap').classList.toggle('hidden', fj.stage !== 'clue');
+      const inGame = !!fj.scores, myScore = inGame ? (fj.scores[me_] || 0) : null;
+      $('fjp-score-wrap').classList.toggle('hidden', inGame);
+      $('fjp-bet-label').textContent = inGame ? `Your bet ($0 up to ${money(Math.max(0, myScore))})` : 'Your bet (0 up to your score)';
+      if (inGame) $('fjp-score').value = myScore;
+      if (inGame && !(fj.eligible || []).includes(me_)) {
+        for (const id of ['fjp-bet-form', 'fjp-bet-done', 'fjp-answer-wrap']) $(id).classList.add('hidden');
+        $('fjp-msg').textContent = 'You need more than $0 to play Final Jeopardy. Enjoy the show!';
+        renderFjTimer(); return;
+      }
       const betting = fj.stage === 'betting';
       const showForm = betting && (mine.editing || mine.bet == null);
       $('fjp-bet-form').classList.toggle('hidden', !showForm);
@@ -905,6 +930,7 @@
       $('fj-player').classList.toggle('hidden', !fj);
       document.querySelector('#view-player .buzzer-area').classList.toggle('hidden', !!fj);
       if (fj) { $('conn-dot').classList.add('on'); $('conn-text').textContent = 'Connected'; renderFj(fj); return; }
+      $('p-dd').classList.add('hidden'); btn.classList.remove('hidden');
       const order = (state && state.order) || [];
       const pos = order.findIndex((o) => o.id === me.clientId);
       const setPill = (on, text) => { $('conn-dot').classList.toggle('on', on); $('conn-text').textContent = text; };
@@ -930,7 +956,10 @@
       if (game) $('me-score').textContent = '· ' + money(game.scores[me.clientId] || 0);
       $('p-clue').classList.toggle('hidden', !cl);
       document.querySelector('#view-player .buzzer-area').classList.toggle('with-clue', !!cl);
-      if (cl) { $('p-clue-top').textContent = `${cl.category} · ${money(cl.value)}`; $('p-clue-text').textContent = cl.text; }
+      if (cl) {
+        $('p-clue-top').textContent = cl.dd ? `${cl.category} · Daily Double` : `${cl.category} · ${money(cl.value)}`;
+        $('p-clue-text').textContent = cl.text || (cl.dd ? 'Daily Double!' : '');
+      }
       if (game) {
         const nm = (id) => (game.names && game.names[id]) || 'Someone';
         if (!cl || cl.stage === 'done') {
@@ -941,6 +970,23 @@
           } else {
             st.textContent = 'Look at the board';
             sub.textContent = game.control === me.clientId ? 'You pick the next clue!' : game.control ? `${nm(game.control)} picks the next clue` : 'The host picks the next clue';
+          }
+          return;
+        }
+        if (cl.dd) { // Daily Double: only one player, who wagers first; no buzzers
+          const dd = cl.dd, mine = dd.player === me.clientId;
+          const formOn = mine && !dd.revealed && dd.wager == null;
+          if (ddKey !== cl.key) { ddKey = cl.key; $('p-dd-wager').value = ''; $('p-dd-err').classList.add('hidden'); }
+          $('p-dd').classList.toggle('hidden', !formOn); btn.classList.toggle('hidden', formOn);
+          if (formOn) $('p-dd-label').textContent = `Your wager: ${money(dd.min)} to ${money(dd.max)}`;
+          if (!dd.revealed) {
+            st.textContent = !dd.player ? 'Daily Double!' : mine ? (dd.wager == null ? 'Daily Double! Make your wager' : `You wagered ${money(dd.wager)}`)
+              : (dd.wager == null ? `Daily Double! ${nm(dd.player)} is making a wager` : `${nm(dd.player)} wagered ${money(dd.wager)}`);
+            sub.textContent = !dd.player ? 'The host is choosing who plays it.' : mine ? 'Only you can answer this one.' : 'Only they can answer this one.';
+          } else {
+            btn.classList.toggle('mine', mine);
+            st.textContent = mine ? 'Your Daily Double: answer now 🎤' : `${nm(dd.player)} is answering the Daily Double`;
+            sub.textContent = `Wager: ${money(dd.wager)}`;
           }
           return;
         }
@@ -971,6 +1017,19 @@
         sub.textContent = order.length ? `${order[0].name} buzzed first. You can still buzz in.` : 'Tap the buzzer to buzz in';
       }
     }
+
+    let ddKey = null;
+    $('p-dd').onsubmit = (e) => {
+      e.preventDefault();
+      const cl = state && state.game && state.game.clue; if (!cl || !cl.dd) return;
+      const err = (m) => { $('p-dd-err').textContent = m; $('p-dd-err').classList.remove('hidden'); };
+      const raw = $('p-dd-wager').value.trim(), v = Math.round(Number(raw));
+      if (raw === '' || !Number.isFinite(v)) return err('Enter your wager.');
+      if (v < cl.dd.min || v > cl.dd.max) return err(`Wager between ${money(cl.dd.min)} and ${money(cl.dd.max)}.`);
+      $('p-dd-err').classList.add('hidden');
+      send({ t: 'dd-wager', key: cl.key, amount: v });
+      document.activeElement && document.activeElement.blur();
+    };
 
     function buzz(e) {
       if (e) e.preventDefault();
@@ -1156,6 +1215,7 @@
     const pname = (id) => (hs.players[id] && hs.players[id].name) || 'Someone';
     function answerer() {
       const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done') return null;
+      if (cl.dd) return cl.dd.revealed ? cl.dd.player : null; // Daily Double: only that player answers
       const o = hs.order.find((x) => !cl.tried.includes(x.id)); return o ? o.id : null;
     }
     const controlsHere = () => !remoteOn() || document.body.classList.contains('controls-forced');
@@ -1196,12 +1256,42 @@
       let at; try { at = clueAt(key); } catch { return; }
       if (at.r !== g.round || !at.q || !at.q.clue.trim() || g.used[key]) return;
       g.clue = { key, stage: 'live', tried: [], lastWrong: null, result: null };
+      if (at.q.dailyDouble) {
+        // Daily Double: the player in control wagers, then answers alone. No buzzers.
+        g.clue.dd = { player: g.control && hs.players[g.control] ? g.control : null, wager: null, revealed: false };
+        hs.order = []; hs.round++; hs.armed = false; changed();
+        if ($('host-sound').checked) { try { soundById('fanfare').play(); } catch {} }
+        return;
+      }
       // With Jeopardy rules the buzzers stay locked while the host reads.
       hs.order = []; hs.round++; hs.armed = !hs.jeopardy; changed();
     }
+    // Daily Double wager limits: at least $5, up to the player's score or the round's top value, whichever is more.
+    function ddLimits(id) {
+      const g = hs.game, score = (id && g.scores[id]) || 0;
+      const vals = g.board.rounds[g.round].categories.flatMap((c) => c.clues).filter((q) => q.clue.trim()).map((q) => q.value);
+      const max = Math.max(score, vals.length ? Math.max(...vals) : (g.round ? 2000 : 1000));
+      return { min: Math.min(5, max), max };
+    }
+    function gameDdPlayer(id) {
+      const dd = hs.game && hs.game.clue && hs.game.clue.dd;
+      if (!dd || dd.revealed || dd.wager != null || !hs.players[id]) return;
+      dd.player = id; hs.game.control = id; changed();
+    }
+    function gameDdWager(amount, from) {
+      const cl = hs.game && hs.game.clue, dd = cl && cl.dd;
+      if (!dd || dd.revealed || !dd.player || (from && from !== dd.player)) return;
+      const v = Math.round(Number(amount)); if (!Number.isFinite(v)) return;
+      const { min, max } = ddLimits(dd.player);
+      dd.wager = Math.min(max, Math.max(min, v)); changed();
+    }
+    function gameDdReveal() {
+      const dd = hs.game && hs.game.clue && hs.game.clue.dd;
+      if (dd && !dd.revealed && dd.wager != null) { dd.revealed = true; changed(); }
+    }
     function gameOpen() {
       const cl = hs.game && hs.game.clue;
-      if (!cl || cl.stage === 'done' || hs.armed || answerer()) return;
+      if (!cl || cl.dd || cl.stage === 'done' || hs.armed || answerer()) return;
       hs.armed = true; changed();
     }
     function judgeSound(kind) {
@@ -1215,6 +1305,11 @@
     function gameJudge(correct) {
       const g = hs.game, cl = g && g.clue, id = answerer(); if (!cl || !id) return;
       gameSnapshot();
+      if (cl.dd) { // win or lose the wager; the player keeps control either way
+        const w = cl.dd.wager || 0;
+        g.scores[id] = (g.scores[id] || 0) + (correct ? w : -w); g.control = id;
+        judgeSound(correct ? 'right' : 'wrong'); gameFinish({ id, correct, delta: correct ? w : -w, dd: true }); return;
+      }
       const v = clueAt(cl.key).q.value;
       g.scores[id] = (g.scores[id] || 0) + (correct ? v : -v);
       if (correct) { g.control = id; judgeSound('right'); gameFinish({ id, correct: true, delta: v }); return; }
@@ -1224,7 +1319,7 @@
       hs.order = []; hs.round++; hs.armed = true; changed(); // rebound: everyone else can buzz straight away
     }
     function gamePass() {
-      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done') return;
+      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done' || cl.dd) return;
       gameSnapshot(); judgeSound('pass'); gameFinish({ pass: true });
     }
     function gameFinish(result) {
@@ -1236,7 +1331,7 @@
     }
     function gameBack() { const cl = hs.game && hs.game.clue; if (cl && cl.stage === 'done') { hs.game.clue = null; changed(); } }
     function gameCancel() {
-      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done' || cl.tried.length) return; // after a ruling, use Undo
+      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done' || cl.tried.length || (cl.dd && cl.dd.revealed)) return; // after a ruling, use Undo
       hs.game.clue = null; hs.order = []; hs.round++; hs.armed = false; changed();
     }
     function gameUndo() {
@@ -1267,7 +1362,8 @@
       const cl = g.clue;
       if (cl) {
         const { cat, q } = clueAt(cl.key);
-        out.clue = { key: cl.key, category: cat.name, value: q.value, text: q.clue, stage: cl.stage, tried: cl.tried, answerer: answerer(),
+        out.clue = { key: cl.key, category: cat.name, value: q.value, text: cl.dd && !cl.dd.revealed ? '' : q.clue, stage: cl.stage, tried: cl.tried, answerer: answerer(),
+          dd: cl.dd ? { ...cl.dd, ...ddLimits(cl.dd.player) } : null, // the Daily Double clue stays hidden until it's revealed
           lastWrong: cl.lastWrong, result: cl.result, response: cl.stage === 'done' ? q.response : '' }; // the response only after the clue is over
       }
       return out;
@@ -1291,10 +1387,14 @@
       $('gt-clue').classList.toggle('hidden', !cl);
       if (cl) {
         const { cat, q } = clueAt(cl.key), stEl = $('gt-c-status'), r = cl.result;
-        $('gt-c-top').textContent = `${cat.name} · ${money(q.value)}`;
-        $('gt-c-text').textContent = q.clue;
+        const dd = cl.dd, ddHidden = !!dd && !dd.revealed;
+        $('gt-c-top').textContent = dd ? `${cat.name} · Daily Double` : `${cat.name} · ${money(q.value)}`;
+        $('gt-c-text').textContent = ddHidden ? 'Daily Double!' : q.clue;
+        $('gt-c-text').classList.toggle('gc-dd', ddHidden);
         stEl.classList.toggle('who', !!ans);
-        if (cl.stage === 'done') stEl.textContent = r.pass ? 'No one got it' : r.correct ? `✓ ${pname(r.id)} ${money(r.delta)}` : `✗ ${pname(r.id)} ${money(r.delta)}`;
+        if (ddHidden) stEl.textContent = !dd.player ? 'Who will play it?' : dd.wager == null ? `${pname(dd.player)} is making a wager…` : `${pname(dd.player)} wagers ${money(dd.wager)}`;
+        else if (dd && cl.stage !== 'done') stEl.textContent = `${pname(dd.player)} · ${money(dd.wager)}`;
+        else if (cl.stage === 'done') stEl.textContent = r.pass ? 'No one got it' : r.correct ? `✓ ${pname(r.id)} ${money(r.delta)}` : `✗ ${pname(r.id)} ${money(r.delta)}`;
         else if (ans) stEl.textContent = pname(ans);
         else if (hs.armed) stEl.textContent = cl.lastWrong ? `✗ ${pname(cl.lastWrong.id)} ${money(cl.lastWrong.delta)}. Anyone else?` : 'Buzz in!';
         else stEl.textContent = '';
@@ -1305,25 +1405,36 @@
       const sc = $('gt-scores'); sc.innerHTML = '';
       for (const p of Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt)) {
         const v = g.scores[p.id] || 0, d = document.createElement('div');
-        d.className = 'gscore' + (g.control === p.id ? ' ctrl' : '') + (ans === p.id ? ' ans' : '');
+        const choosing = cl && cl.dd && !cl.dd.player && cl.stage !== 'done' && controlsHere();
+        d.className = 'gscore' + (g.control === p.id ? ' ctrl' : '') + (ans === p.id ? ' ans' : '') + (choosing ? ' pickable' : '');
+        if (choosing) { d.title = 'Click to give this player the Daily Double'; d.onclick = () => gameDdPlayer(p.id); }
         d.innerHTML = '<div class="n"></div><div class="s"></div>';
         d.querySelector('.n').textContent = p.name; d.querySelector('.s').textContent = money(v);
         d.querySelector('.s').classList.toggle('neg', v < 0);
         sc.appendChild(d);
       }
       // TV controls (used only when there's no host remote)
-      const live = cl && cl.stage !== 'done';
-      $('gt-open').classList.toggle('hidden', !live || hs.armed || !!ans);
+      const live = cl && cl.stage !== 'done', dd = live && cl.dd;
+      $('gt-open').classList.toggle('hidden', !live || !!dd || hs.armed || !!ans);
+      $('gt-dd-wager').classList.toggle('hidden', !dd || dd.revealed || !dd.player);
+      $('gt-dd-reveal').classList.toggle('hidden', !dd || dd.revealed || dd.wager == null);
       $('gt-right').classList.toggle('hidden', !ans); $('gt-wrong').classList.toggle('hidden', !ans);
-      if (ans) { const v = clueAt(cl.key).q.value; $('gt-right').textContent = `✓ Right +${money(v)}`; $('gt-wrong').textContent = `✗ Wrong −${money(v)}`; }
-      $('gt-pass').classList.toggle('hidden', !live);
-      $('gt-cancel').classList.toggle('hidden', !live || cl.tried.length > 0);
+      if (ans) { const v = dd ? dd.wager : clueAt(cl.key).q.value; $('gt-right').textContent = `✓ Right +${money(v)}`; $('gt-wrong').textContent = `✗ Wrong −${money(v)}`; }
+      $('gt-pass').classList.toggle('hidden', !live || !!dd);
+      $('gt-cancel').classList.toggle('hidden', !live || cl.tried.length > 0 || !!(dd && dd.revealed));
       $('gt-undo').disabled = !gameSnaps.length;
       const other = g.round === 0 ? 1 : 0;
       $('gt-round').textContent = g.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
       $('gt-round').classList.toggle('hidden', !!live || !roundHasClues(g.board, other));
     }
     $('gt-open').onclick = gameOpen;
+    $('gt-dd-wager').onclick = () => {
+      const dd = hs.game && hs.game.clue && hs.game.clue.dd; if (!dd || !dd.player) return;
+      const { min, max } = ddLimits(dd.player);
+      const v = prompt(`${pname(dd.player)}'s wager (${money(min)} to ${money(max)}):`, dd.wager ?? '');
+      if (v !== null) gameDdWager(String(v).replace(/[$,\s]/g, ''));
+    };
+    $('gt-dd-reveal').onclick = gameDdReveal;
     $('gt-right').onclick = () => gameJudge(true);
     $('gt-wrong').onclick = () => gameJudge(false);
     $('gt-pass').onclick = gamePass;
@@ -1367,9 +1478,14 @@
         clue: f.stage === 'betting' ? '' : f.clue, // the clue never leaves this screen before it's revealed
         remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0,
         betIn: Object.keys(f.bets), answered: Object.keys(f.answers).filter((id) => f.answers[id].trim()), revealed,
+        eligible: hs.game ? fjList().map((p) => p.id) : null, scores: hs.game ? hs.game.scores : null,
       };
     }
     const fjPlayers = () => Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
+    // In a board game only players with more than $0 play Final Jeopardy, like the show.
+    // Who plays is fixed when Final Jeopardy starts, so nobody drops off the list during the reveal.
+    const fjList = () => (hs.fj && hs.fj.eligible ? fjPlayers().filter((p) => hs.fj.eligible.includes(p.id))
+      : hs.game ? fjPlayers().filter((p) => (hs.game.scores[p.id] || 0) > 0) : fjPlayers());
     function renderFj() {
       const f = hs.fj, on = !!f || fjEditing;
       $('host-main').classList.toggle('hidden', on || !!hs.game);
@@ -1388,7 +1504,7 @@
       $('fjh-edit').classList.toggle('hidden', f.stage !== 'betting');
       $('fjh-skip').classList.toggle('hidden', f.stage !== 'clue');
       // Who's in (amounts and answers stay hidden until the reveal).
-      const list = fjPlayers();
+      const list = fjList();
       const chipsOn = f.stage !== 'reveal';
       $('fjh-chips').classList.toggle('hidden', !chipsOn); $('fjh-chips-title').classList.toggle('hidden', !chipsOn);
       if (chipsOn) {
@@ -1406,7 +1522,7 @@
       if (f.stage !== 'reveal') return;
       ol.innerHTML = '';
       // Lowest score first, like the show.
-      const list = fjPlayers().sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
+      const list = fjList().sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
       for (const p of list) {
         const b = f.bets[p.id], r = f.reveal[p.id] || {}, ans = (f.answers[p.id] || '').trim();
         const li = document.createElement('li');
@@ -1511,11 +1627,12 @@
       category = String(category || '').trim().slice(0, 80); clue = String(clue || '').trim().slice(0, 400); response = String(response || '').trim().slice(0, 160);
       if (!category || !clue) return false;
       if (hs.fj) { if (hs.fj.stage !== 'betting') return false; Object.assign(hs.fj, { category, clue, response }); } // editing keeps the bets
-      else hs.fj = { id: uid(), stage: 'betting', category, clue, response, endsAt: 0, bets: {}, answers: {}, reveal: {} };
+      else hs.fj = { id: uid(), stage: 'betting', category, clue, response, endsAt: 0, bets: {}, answers: {}, reveal: {},
+        eligible: hs.game ? fjPlayers().filter((p) => (hs.game.scores[p.id] || 0) > 0).map((p) => p.id) : null };
       delete hs.fjDraft; hs.armed = false; fjEditing = false; changed();
       return true;
     }
-    const fjMissingBets = () => (hs.fj ? fjPlayers().filter((p) => !hs.fj.bets[p.id]).length : 0);
+    const fjMissingBets = () => (hs.fj ? fjList().filter((p) => !hs.fj.bets[p.id]).length : 0);
     function fjStartClue() {
       if (!hs.fj || hs.fj.stage !== 'betting') return;
       hs.fj.stage = 'clue'; hs.fj.endsAt = Date.now() + FJ_MS; lastFjBroadcast = Date.now(); changed();
@@ -1535,7 +1652,12 @@
     }
     function fjJudge(id, correct) {
       const f = hs.fj, r = f && f.stage === 'reveal' && f.reveal[id]; if (!r || !r.shown) return;
-      if (correct === true || correct === false) r.correct = correct; else delete r.correct;
+      // In a board game the result goes straight onto the scoreboard (and comes off again on Undo).
+      if (hs.game && r.applied) { hs.game.scores[id] = (hs.game.scores[id] || 0) - r.applied; delete r.applied; }
+      if (correct === true || correct === false) {
+        r.correct = correct;
+        if (hs.game) { const bet = (f.bets[id] || {}).bet || 0, d = correct ? bet : -bet; hs.game.scores[id] = (hs.game.scores[id] || 0) + d; r.applied = d; }
+      } else delete r.correct;
       changed();
     }
 
@@ -1587,7 +1709,7 @@
         t: 'hs', code: hs.code, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy,
         order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name, at: o.at })),
         players: fjPlayers().map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
-        fj: f ? { ...f, remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0 } : null,
+        fj: f ? { ...f, remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0, eligible: hs.game ? fjList().map((p) => p.id) : null } : null,
         music: $('fj-music').checked, musicName: musicFile ? musicFile.name : '',
         game: hs.game ? { ...hs.game, answerer: answerer() } : null, canUndo: gameSnaps.length > 0, boards: boardList(),
       };
@@ -1621,6 +1743,9 @@
         case 'game-score': gameScore(id, c.score); break;
         case 'game-control': gameControl(id); break;
         case 'game-round': gameRound(Number(c.round)); break;
+        case 'game-dd-player': gameDdPlayer(id); break;
+        case 'game-dd-wager': gameDdWager(c.amount); break;
+        case 'game-dd-reveal': gameDdReveal(); break;
         case 'jeopardy': hs.jeopardy = !!c.on; changed(); break;
         case 'kick': if (hs.players[id]) kick(id); break;
         case 'fj-setup': fjSetup(c.category, c.clue, c.response); break;
@@ -1690,10 +1815,15 @@
         if ($('host-sound').checked) playSound(p.sound);
         changed();
         const li = $('order').lastElementChild; if (li) li.classList.add('flash');
+      } else if (msg.t === 'dd-wager') {
+        const cl = hs.game && hs.game.clue;
+        if (cl && cl.dd && cl.key === msg.key) gameDdWager(msg.amount, id); else broadcast();
       } else if (msg.t === 'fj-bet') {
         const f = hs.fj;
         if (!f || f.stage !== 'betting' || msg.fj !== f.id || !hs.players[id]) { broadcast(); return; }
-        const score = Math.round(Number(msg.score)), bet = Math.round(Number(msg.bet));
+        // In a board game the score comes from the scoreboard, and $0 or less can't play.
+        const score = hs.game ? (hs.game.scores[id] || 0) : Math.round(Number(msg.score)), bet = Math.round(Number(msg.bet));
+        if (hs.game && (score <= 0 || (f.eligible && !f.eligible.includes(id)))) { broadcast(); return; }
         if (!isFinite(score) || !isFinite(bet)) return;
         f.bets[id] = { score, bet: Math.min(Math.max(0, bet), Math.max(0, score)) };
         changed();
@@ -1833,22 +1963,40 @@
       $('r-g-boardwrap').classList.toggle('hidden', !!live);
       if (cl) {
         const [r, c, i] = cl.key.split('-').map(Number), cat = G.board.rounds[r].categories[c], q = cat.clues[i];
-        $('r-g-c-top').textContent = `${cat.name} · ${money(q.value)}` + (q.dailyDouble ? ' · Daily Double (plays as a normal clue for now)' : '');
-        $('r-g-c-text').textContent = q.clue;
+        const dd = cl.dd;
+        $('r-g-c-top').textContent = `${cat.name} · ${money(q.value)}` + (dd ? ' · DAILY DOUBLE' : '');
+        $('r-g-c-text').textContent = q.clue + (dd && !dd.revealed ? '  (hidden from players until you reveal it)' : '');
         $('r-g-c-resp').textContent = q.response || '(none written)';
+        // Daily Double: who plays it, their wager, then reveal
+        $('r-g-dd').classList.toggle('hidden', !dd || !live || dd.revealed);
+        if (dd && live && !dd.revealed) {
+          const pick = $('r-g-dd-pick'); pick.innerHTML = '';
+          if (!dd.player) {
+            const h = document.createElement('div'); h.className = 'muted'; h.textContent = 'No one has control yet. Who plays this Daily Double?'; pick.appendChild(h);
+            for (const p of g.players) { const b = document.createElement('button'); b.className = 'secondary'; b.textContent = `${p.name} plays it`; b.onclick = () => cmd({ cmd: 'game-dd-player', id: p.id }); pick.appendChild(b); }
+          }
+          $('r-g-dd-wagerrow').classList.toggle('hidden', !dd.player);
+          const lim = ddLimitsR(G, dd.player);
+          $('r-g-dd-note').textContent = !dd.player ? '' : `${nm(dd.player)} has ${money(G.scores[dd.player] || 0)}, so they can wager ${money(lim.min)} to ${money(lim.max)}. ` +
+            (dd.wager == null ? 'Waiting for their wager on their phone, or type it here.' : `Wager: ${money(dd.wager)}.`);
+          $('r-g-dd-reveal').disabled = dd.wager == null;
+        }
         const res = cl.result;
         let status = '';
-        if (!live) status = res.pass ? 'No one got it' : res.correct ? `✓ ${nm(res.id)} ${money(res.delta)}` : `✗ ${nm(res.id)} ${money(res.delta)}. No one else left`;
+        if (!live) status = res.pass ? 'No one got it' : res.correct ? `✓ ${nm(res.id)} ${money(res.delta)}` : `✗ ${nm(res.id)} ${money(res.delta)}` + (res.dd ? '' : '. No one else left');
+        else if (dd && !dd.revealed) status = 'Daily Double!';
+        else if (dd) status = `${nm(dd.player)} is answering · wager ${money(dd.wager)}`;
         else if (ans) status = `${nm(ans)} buzzed in`;
         else if (g.armed) status = cl.lastWrong ? `✗ ${nm(cl.lastWrong.id)} ${money(cl.lastWrong.delta)}. Buzzers open for everyone else…` : 'Buzzers open. Waiting for a buzz…';
         else status = 'Read the clue, then open the buzzers.';
         $('r-g-c-status').textContent = status;
-        $('r-g-open').classList.toggle('hidden', !live || g.armed || !!ans);
+        $('r-g-open').classList.toggle('hidden', !live || !!dd || g.armed || !!ans);
         $('r-g-judge').classList.toggle('hidden', !ans);
-        $('r-g-right').textContent = `✓ Right +${money(q.value)}`; $('r-g-wrong').textContent = `✗ Wrong −${money(q.value)}`;
-        $('r-g-pass').classList.toggle('hidden', !live);
+        const v = dd ? dd.wager : q.value;
+        $('r-g-right').textContent = `✓ Right +${money(v || 0)}`; $('r-g-wrong').textContent = `✗ Wrong −${money(v || 0)}`;
+        $('r-g-pass').classList.toggle('hidden', !live || !!dd);
         $('r-g-back').classList.toggle('hidden', !!live);
-        $('r-g-cancel').classList.toggle('hidden', !live || cl.tried.length > 0);
+        $('r-g-cancel').classList.toggle('hidden', !live || cl.tried.length > 0 || !!(dd && dd.revealed));
       }
       // Miniature board: tap a value to show that clue
       const bd = $('r-g-board'); bd.innerHTML = '';
@@ -1887,6 +2035,19 @@
       $('r-g-round').textContent = G.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
       $('r-g-round').classList.toggle('hidden', !!live || !roundHasClues(G.board, other));
     }
+    // Same limits the game screen uses: $5 up to the player's score or the round's top value.
+    function ddLimitsR(G, id) {
+      const score = (id && G.scores[id]) || 0;
+      const vals = G.board.rounds[G.round].categories.flatMap((c) => c.clues).filter((q) => q.clue.trim()).map((q) => q.value);
+      const max = Math.max(score, vals.length ? Math.max(...vals) : (G.round ? 2000 : 1000));
+      return { min: Math.min(5, max), max };
+    }
+    $('r-g-dd-set').onclick = () => {
+      const raw = $('r-g-dd-wager').value.replace(/[$,\s]/g, ''), v = Math.round(Number(raw));
+      if (raw === '' || !Number.isFinite(v)) return;
+      cmd({ cmd: 'game-dd-wager', amount: v }); $('r-g-dd-wager').value = '';
+    };
+    $('r-g-dd-reveal').onclick = () => cmd({ cmd: 'game-dd-reveal' });
     $('r-g-open').onclick = () => cmd({ cmd: 'arm', on: true });
     $('r-g-right').onclick = () => cmd({ cmd: 'game-judge', correct: true });
     $('r-g-wrong').onclick = () => cmd({ cmd: 'game-judge', correct: false });
@@ -1955,7 +2116,7 @@
       $('r-fj-skip').classList.toggle('hidden', f.stage !== 'clue');
       $('r-fj-music').checked = !!g.music;
       $('r-fj-music-name').textContent = g.musicName ? `(${g.musicName})` : '';
-      const list = fjPlayers();
+      const list = f.eligible ? fjPlayers().filter((p) => f.eligible.includes(p.id)) : fjPlayers();
       const done = (id) => (f.stage === 'betting' ? !!f.bets[id] : !!(f.answers[id] || '').trim());
       const chipsOn = f.stage !== 'reveal';
       $('r-fj-chips').classList.toggle('hidden', !chipsOn);
@@ -1973,7 +2134,7 @@
     // The host sees every answer here; "Show on TV" reveals it to the room.
     function renderReveal(f) {
       const ol = $('r-fj-reveal'); ol.innerHTML = '';
-      const list = [...fjPlayers()].sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
+      const list = (f.eligible ? fjPlayers().filter((p) => f.eligible.includes(p.id)) : [...fjPlayers()]).sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
       for (const p of list) {
         const b = f.bets[p.id], r = f.reveal[p.id] || {}, ans = (f.answers[p.id] || '').trim();
         const li = document.createElement('li');
@@ -2030,7 +2191,7 @@
       render();
     };
     $('r-fj-start').onclick = () => {
-      const missing = fjPlayers().filter((p) => !g.fj.bets[p.id]).length;
+      const missing = (g.fj.eligible ? fjPlayers().filter((p) => g.fj.eligible.includes(p.id)) : fjPlayers()).filter((p) => !g.fj.bets[p.id]).length;
       if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
       cmd({ cmd: 'fj-start' });
     };
