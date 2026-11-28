@@ -102,18 +102,22 @@
   .logo.md { font-size: 36px; }
   .logo.sm { font-size: 22px; text-shadow: 2px 2px 0 var(--gold); }
   .marquee { position: relative; background: var(--frame); border-radius: 22px; padding: 24px; box-shadow: 0 8px 0 rgba(0,0,0,.18); }
-  .marquee::before {
-    content: ''; position: absolute; inset: 5px; border-radius: 18px; padding: 8px; pointer-events: none;
-    background: radial-gradient(circle, var(--bulb) 0 3.6px, transparent 4.6px) 0 0 / 22px 22px;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    filter: drop-shadow(0 0 3px #ffc95c); animation: chase 1.4s steps(1) infinite;
+  /* Bulbs are a border image: whole bulbs spaced evenly along each edge, one in each corner,
+     whatever the size. Two patterns take turns being lit, so the lights "chase". */
+  .marquee::before, .marquee::after {
+    content: ''; position: absolute; inset: 2px; pointer-events: none;
+    border: 22px solid transparent; border-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='88' height='88'><g fill='%23ffe7a6'><circle cx='11' cy='11' r='4'/><circle cx='77' cy='11' r='4'/><circle cx='11' cy='77' r='4'/><circle cx='77' cy='77' r='4'/><circle cx='33' cy='11' r='4'/><circle cx='33' cy='77' r='4'/><circle cx='11' cy='33' r='4'/><circle cx='77' cy='33' r='4'/></g><g fill='%23ffe7a6' fill-opacity='.25'><circle cx='55' cy='11' r='4'/><circle cx='55' cy='77' r='4'/><circle cx='11' cy='55' r='4'/><circle cx='77' cy='55' r='4'/></g></svg>") 22 round space; /* top/bottom: fit evenly; sides: keep bulbs round */
+    filter: drop-shadow(0 0 3px #ffc95c);
   }
+  .marquee::after { border-image-source: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='88' height='88'><g fill='%23ffe7a6'><circle cx='11' cy='11' r='4'/><circle cx='77' cy='11' r='4'/><circle cx='11' cy='77' r='4'/><circle cx='77' cy='77' r='4'/><circle cx='55' cy='11' r='4'/><circle cx='55' cy='77' r='4'/><circle cx='11' cy='55' r='4'/><circle cx='77' cy='55' r='4'/></g><g fill='%23ffe7a6' fill-opacity='.25'><circle cx='33' cy='11' r='4'/><circle cx='33' cy='77' r='4'/><circle cx='11' cy='33' r='4'/><circle cx='77' cy='33' r='4'/></g></svg>"); opacity: 0; }
   .marquee > * { position: relative; z-index: 1; }
-  @keyframes chase { 50% { background-position: 11px 11px; } }
+  .marquee::before { animation: bulbsA 1.4s steps(1) infinite; }
+  .marquee::after { animation: bulbsB 1.4s steps(1) infinite; }
+  @keyframes bulbsA { 50% { opacity: 0; } }
+  @keyframes bulbsB { 50% { opacity: 1; } }
   .sign { display: inline-block; padding: 26px 40px; }
   .sign .logo { color: var(--cream); text-shadow: 4px 4px 0 var(--accent), 7px 7px 0 #000; }
-  @media (prefers-reduced-motion: reduce) { .marquee::before { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .marquee::before, .marquee::after { animation: none; } }
 
   /* ---------- Home ---------- */
   .hero { text-align: center; padding: 18px 0 8px; }
