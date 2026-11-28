@@ -1,0 +1,442 @@
+{
+  "format": "gamebuzzer-board",
+  "version": 1,
+  "id": "lbm4weskmkcn",
+  "title": "Sample Game Night",
+  "updated": 1795841441395,
+  "rounds": [
+    {
+      "categories": [
+        {
+          "name": "Animal Kingdom",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "Called the \"King of the Jungle,\" this big cat actually lives mostly on grasslands and savannas",
+              "response": "What is a lion?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "A group of these birds is called a \"parliament\"",
+              "response": "What are owls?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "This Australian marsupial gets almost all the water it needs from eucalyptus leaves",
+              "response": "What is a koala?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "With three hearts and blue blood, this eight-armed sea creature is a master of disguise",
+              "response": "What is an octopus?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1000,
+              "clue": "The fastest land animal, it can reach about 70 miles per hour in short bursts",
+              "response": "What is a cheetah?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Space",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "Known as the Red Planet",
+              "response": "What is Mars?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "The largest planet in our solar system",
+              "response": "What is Jupiter?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "In 1969 he became the first person to walk on the Moon",
+              "response": "Who is Neil Armstrong?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "This planet's famous rings are made mostly of ice and rock",
+              "response": "What is Saturn?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1000,
+              "clue": "Light from this star takes about 8 minutes to reach Earth",
+              "response": "What is the Sun?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Food & Drink",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "Guacamole is made mainly from this green fruit",
+              "response": "What is an avocado?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "This pasta's Italian name means \"little strings\"",
+              "response": "What is spaghetti?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "Saffron, the world's most expensive spice by weight, comes from this flower",
+              "response": "What is a crocus?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The croissant's ancestor, the kipferl, comes from this European country",
+              "response": "What is Austria?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1000,
+              "clue": "Each cashew nut grows hanging from the bottom of this fruit",
+              "response": "What is the cashew apple?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Around the World",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "This country is home to the Eiffel Tower",
+              "response": "What is France?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "The capital city of Japan",
+              "response": "What is Tokyo?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "The longest river in South America",
+              "response": "What is the Amazon?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "It's the only country that is also a whole continent",
+              "response": "What is Australia?",
+              "dailyDouble": true
+            },
+            {
+              "value": 1000,
+              "clue": "This landlocked European country has four official languages, including Romansh",
+              "response": "What is Switzerland?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Movies & TV",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "In \"The Wizard of Oz,\" Dorothy's little dog has this name",
+              "response": "What is Toto?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "This green ogre who lives in a swamp starred in a 2001 animated film",
+              "response": "Who is Shrek?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "In \"Finding Nemo,\" Nemo is this kind of fish",
+              "response": "What is a clownfish?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "This 1997 film about a doomed ocean liner won 11 Academy Awards",
+              "response": "What is \"Titanic\"?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1000,
+              "clue": "This director made \"Jaws,\" \"E.T.\" and \"Jurassic Park\"",
+              "response": "Who is Steven Spielberg?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Words & Letters",
+          "clues": [
+            {
+              "value": 200,
+              "clue": "The most commonly used letter in English",
+              "response": "What is E?",
+              "dailyDouble": false
+            },
+            {
+              "value": 400,
+              "clue": "A word that reads the same backward and forward, like \"racecar\"",
+              "response": "What is a palindrome?",
+              "dailyDouble": false
+            },
+            {
+              "value": 600,
+              "clue": "In Britain, this punctuation mark is called a \"full stop\"",
+              "response": "What is a period?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The name of the & symbol",
+              "response": "What is an ampersand?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1000,
+              "clue": "A word formed from the first letters of other words, like NASA",
+              "response": "What is an acronym?",
+              "dailyDouble": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "categories": [
+        {
+          "name": "Science",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "H2O is the chemical formula for this",
+              "response": "What is water?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The hardest natural substance on Earth",
+              "response": "What is a diamond?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "This scientist developed the theory of relativity",
+              "response": "Who is Albert Einstein?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "Often called the \"powerhouse of the cell\"",
+              "response": "What is the mitochondrion?",
+              "dailyDouble": false
+            },
+            {
+              "value": 2000,
+              "clue": "This element, with the symbol Fe, is the main ingredient in steel",
+              "response": "What is iron?",
+              "dailyDouble": true
+            }
+          ]
+        },
+        {
+          "name": "U.S. History",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "He was the first President of the United States",
+              "response": "Who is George Washington?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "This document was adopted on July 4, 1776",
+              "response": "What is the Declaration of Independence?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "This president's face appears on the penny",
+              "response": "Who is Abraham Lincoln?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "In 1803 the U.S. bought this huge territory from France",
+              "response": "What is the Louisiana Purchase?",
+              "dailyDouble": false
+            },
+            {
+              "value": 2000,
+              "clue": "Her 1955 refusal to give up her bus seat sparked the Montgomery bus boycott",
+              "response": "Who is Rosa Parks?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Music",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "A standard one of these instruments has 88 keys",
+              "response": "What is a piano?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "He composed the \"Moonlight Sonata\" and kept writing music as he lost his hearing",
+              "response": "Who is Beethoven?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "This British band sang \"Hey Jude\" and \"Yesterday\"",
+              "response": "Who are the Beatles?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "Known as the \"King of Pop,\" he released \"Thriller\" in 1982",
+              "response": "Who is Michael Jackson?",
+              "dailyDouble": true
+            },
+            {
+              "value": 2000,
+              "clue": "A string quartet has two violins, a cello and this instrument",
+              "response": "What is a viola?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Sports",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "You can score a touchdown in this sport",
+              "response": "What is American football?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The number of rings on the Olympic flag",
+              "response": "What is five?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "A perfect score in ten-pin bowling",
+              "response": "What is 300?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "The Wimbledon tennis championships are played on this surface",
+              "response": "What is grass?",
+              "dailyDouble": false
+            },
+            {
+              "value": 2000,
+              "clue": "This country has won the most men's FIFA World Cups",
+              "response": "What is Brazil?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Literature",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "He wrote \"Romeo and Juliet\"",
+              "response": "Who is William Shakespeare?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The name of Harry Potter's school",
+              "response": "What is Hogwarts?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "In this Lewis Carroll book, a girl follows a White Rabbit down a hole",
+              "response": "What is \"Alice's Adventures in Wonderland\"?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "\"Call me Ishmael\" is the opening line of this novel",
+              "response": "What is \"Moby-Dick\"?",
+              "dailyDouble": false
+            },
+            {
+              "value": 2000,
+              "clue": "This author created the detective Sherlock Holmes",
+              "response": "Who is Arthur Conan Doyle?",
+              "dailyDouble": false
+            }
+          ]
+        },
+        {
+          "name": "Body Talk",
+          "clues": [
+            {
+              "value": 400,
+              "clue": "The largest organ of the human body",
+              "response": "What is the skin?",
+              "dailyDouble": false
+            },
+            {
+              "value": 800,
+              "clue": "The number of teeth a typical adult has",
+              "response": "What is 32?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1200,
+              "clue": "The femur is the long bone in this part of your leg",
+              "response": "What is the thigh?",
+              "dailyDouble": false
+            },
+            {
+              "value": 1600,
+              "clue": "The tiny bones in your ear are the hammer, the anvil and this one",
+              "response": "What is the stirrup?",
+              "dailyDouble": false
+            },
+            {
+              "value": 2000,
+              "clue": "Your skin makes this vitamin when it's exposed to sunlight",
+              "response": "What is vitamin D?",
+              "dailyDouble": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "final": {
+    "category": "World Landmarks",
+    "clue": "A gift from France, this monument designed by Frédéric Bartholdi was dedicated in New York Harbor in 1886",
+    "response": "What is the Statue of Liberty?"
+  }
+}
