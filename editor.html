@@ -106,6 +106,26 @@
   ol.steps { margin: 0; padding-left: 20px; }
   ol.steps li + li { margin-top: 4px; }
   code { font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+  /* ---------- printable answer key (only shows when printing) ---------- */
+  #answer-key { display: none; }
+  @media print {
+    @page { margin: 12mm; }
+    body { background: #fff; color: #000; font-size: 10pt; }
+    body > header, body > main, dialog { display: none !important; }
+    #answer-key { display: block; }
+    #answer-key h1 { font-size: 16pt; margin: 0 0 2pt; }
+    #answer-key .warn { font-size: 9pt; color: #444; margin: 0 0 10pt; }
+    #answer-key h2 { font-size: 12pt; color: #000; letter-spacing: 0; text-transform: none; margin: 12pt 0 6pt; border-bottom: 1.5pt solid #000; padding-bottom: 2pt; }
+    #answer-key .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt 12pt; }
+    #answer-key .cat { break-inside: avoid; }
+    #answer-key h3 { font-size: 10.5pt; margin: 0 0 3pt; text-transform: uppercase; }
+    #answer-key .q { margin: 0 0 4pt; line-height: 1.25; }
+    #answer-key .q b { display: inline-block; min-width: 38pt; }
+    #answer-key .q .r { font-weight: 700; }
+    #answer-key .dd { font-size: 8pt; font-weight: 800; border: 1pt solid #000; border-radius: 3pt; padding: 0 3pt; margin-left: 3pt; }
+    #answer-key .round { break-inside: auto; }
+    #answer-key .round + .round { break-before: page; }
+  }
 </style>
 </head>
 <body>
@@ -132,6 +152,7 @@
     <button id="export-csv">Download as spreadsheet</button>
     <button id="save-file">Save board file</button>
     <button id="open-file">Open board file…</button>
+    <button id="print-key">🖨 Print answer key</button>
     <input type="file" id="open-input" accept=".json,application/json" class="hidden">
   </div>
 </header>
@@ -202,6 +223,9 @@
     </div>
   </div>
 </dialog>
+
+<!-- Filled in just before printing -->
+<section id="answer-key" aria-hidden="true"></section>
 
 <script>
 (() => {
@@ -594,6 +618,44 @@
   $('import-text').oninput = reportImport;
   $('import-cancel').onclick = () => $('import-dialog').close();
   $('import-go').onclick = () => { if (lastParse && !lastParse.problems.length) { applyImport(lastParse); $('import-dialog').close(); setStatus('Imported. Saved in this browser'); } };
+
+  // ---------------------------------------------------------------- printable answer key
+  function buildAnswerKey() {
+    const b = board(), el = $('answer-key'); el.innerHTML = '';
+    const add = (parent, tag, cls, text) => { const x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; parent.appendChild(x); return x; };
+    add(el, 'h1', '', `${b.title || 'Board'}: answer key`);
+    add(el, 'p', 'warn', 'For the host only. Keep this away from players.');
+    b.rounds.forEach((round, r) => {
+      const cats = round.categories.filter((c) => c.name.trim() || c.clues.some((q) => q.clue.trim()));
+      if (!cats.length) return;
+      const sec = add(el, 'div', 'round');
+      add(sec, 'h2', '', `Round ${r + 1}`);
+      const grid = add(sec, 'div', 'cats');
+      for (const c of cats) {
+        const box = add(grid, 'div', 'cat');
+        add(box, 'h3', '', c.name || '(no category name)');
+        for (const q of c.clues) {
+          if (!q.clue.trim() && !q.response.trim()) continue;
+          const p = add(box, 'p', 'q');
+          add(p, 'b', '', money(q.value));
+          if (q.dailyDouble) add(p, 'span', 'dd', 'DD');
+          p.append(' ' + (q.clue || '(no clue)') + ' ');
+          add(p, 'span', 'r', '→ ' + (q.response || '(no response)'));
+        }
+      }
+    });
+    const f = b.final;
+    if (f.category.trim() || f.clue.trim()) {
+      const sec = add(el, 'div', '');
+      add(sec, 'h2', '', 'Final');
+      const p = add(sec, 'p', 'q');
+      add(p, 'b', '', (f.category || '(no category)') + ':');
+      p.append(' ' + (f.clue || '(no clue)') + ' ');
+      add(p, 'span', 'r', '→ ' + (f.response || '(no response)'));
+    }
+  }
+  $('print-key').onclick = () => { buildAnswerKey(); window.print(); };
+  window.addEventListener('beforeprint', buildAnswerKey); // also when printing from the browser menu
 
   renderAll();
 })();

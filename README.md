@@ -67,6 +67,12 @@ Players never receive the board. Each phone gets only the clue being played, and
 
 **Daily Doubles:** when the host taps one, the TV shows **DAILY DOUBLE!** with a fanfare, and the clue stays hidden from everyone. The player in control wagers on their phone: at least $5, up to their score or the round's top value, whichever is higher. The host can also type the wager on the remote, and choose who plays it if no one has control yet. Then **Reveal the clue**. Only that player answers (no buzzers), **✓ / ✗** adds or subtracts the wager, and they keep control either way.
 
+**End of the game:** tap **🏁 Show the winner** on the remote. It's the big button at the top once Final Jeopardy is done. The TV shows the final standings with confetti, handling ties and "no one finished above $0". Each phone shows that player's place. From there: **← Back to the board**, **Play this board again** (scores reset to $0), or **End board game**.
+
+**Sound:** the game screen plays original sound effects: a chime when a clue appears, a jingle for Round 2, right and wrong sounds, a Daily Double fanfare and a winner fanfare. **Buzzer sounds and sound effects on the game screen** at the top of the remote turns them all on or off.
+
+**Answer key:** in the board editor, **🖨 Print answer key** prints every clue and correct response by round and category, with Daily Doubles marked "DD". A full board fits on two pages. Handy if you host without the remote, or as a backup.
+
 **Final Jeopardy in a board game:** players don't type their score; their phone shows it and caps the bet at that amount. Anyone at $0 or below sits it out. Who plays is fixed when Final Jeopardy starts. Each **✓ / ✗** in the reveal goes straight onto the scoreboard (and comes off again on **Undo**). **Finish Final Jeopardy** returns to the board with the final totals.
 
 ## Putting it online for free (GitHub Pages)

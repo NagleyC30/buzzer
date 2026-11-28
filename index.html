@@ -159,6 +159,20 @@
   .gc-status.who { font-size: clamp(34px, 5vw, 72px); }
   .gc-dd { font-size: clamp(48px, 9vw, 130px); font-weight: 900; color: #ffd54a; letter-spacing: .04em; text-shadow: 4px 4px 0 #000; line-height: 1; animation: ddpop .6s ease-out; }
   @keyframes ddpop { from { transform: scale(.3) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .gfinal { position: relative; overflow: hidden; background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; min-height: 62vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; }
+  .gf-trophy { font-size: clamp(48px, 8vw, 110px); line-height: 1; }
+  .gf-title { font-size: clamp(28px, 4.6vw, 64px); font-weight: 900; color: #ffd54a; margin: 12px 0 22px; text-shadow: 3px 3px 0 #000; overflow-wrap: anywhere; }
+  ol.gf-list { list-style: none; margin: 0; padding: 0; width: min(640px, 100%); position: relative; z-index: 1; }
+  ol.gf-list li { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-radius: 12px; background: rgba(255,255,255,.08); font-size: clamp(18px, 2.4vw, 30px); }
+  ol.gf-list li + li { margin-top: 8px; }
+  ol.gf-list li.top { background: rgba(255,213,74,.22); outline: 2px solid #ffd54a; }
+  ol.gf-list .rk { width: 2.2em; font-weight: 800; opacity: .8; }
+  ol.gf-list .nm { flex: 1; text-align: left; font-weight: 700; overflow-wrap: anywhere; }
+  ol.gf-list .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .confetti { position: absolute; inset: 0; pointer-events: none; }
+  .confetti i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
   .gscore.pickable { cursor: pointer; outline: 2px dashed var(--gold); }
   .gc-resp { margin-top: 14px; font-size: clamp(18px, 2.2vw, 30px); }
   .gscores { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 12px; }
@@ -365,8 +379,19 @@
       <div class="gc-status" id="gt-c-status"></div>
       <div class="gc-resp hidden" id="gt-c-resp"></div>
     </div>
+    <div id="gt-final" class="gfinal hidden">
+      <div class="confetti" id="gt-confetti"></div>
+      <div class="gf-trophy">🏆</div>
+      <div class="gf-title" id="gt-f-title"></div>
+      <ol id="gt-f-list" class="gf-list"></ol>
+    </div>
     <div id="gt-scores" class="gscores"></div>
-    <div class="host-actions tv-control">
+    <div class="host-actions tv-control" id="gt-final-actions">
+      <button id="gt-unfinish" class="secondary">← Back to the board</button>
+      <button id="gt-restart" class="secondary">Play this board again</button>
+      <button id="gt-end2" class="secondary">End board game</button>
+    </div>
+    <div class="host-actions tv-control" id="gt-actions">
       <button id="gt-open" class="btn-ok">Open buzzers (space)</button>
       <button id="gt-dd-wager" class="secondary">Set wager…</button>
       <button id="gt-dd-reveal" class="btn-ok">Reveal the clue</button>
@@ -377,6 +402,7 @@
       <button id="gt-undo" class="secondary">Undo last ruling</button>
       <button id="gt-round" class="secondary"></button>
       <button id="gt-fj" class="secondary">🏆 Final Jeopardy</button>
+      <button id="gt-finish" class="secondary">🏁 Show the winner</button>
       <button id="gt-end" class="secondary">End board game</button>
     </div>
     <p class="muted tv-control" style="font-size:14px; margin-top:8px">Click a value to show that clue. Correct responses appear only on the host remote.</p>
@@ -457,7 +483,8 @@
     <h1>Host remote</h1>
     <span class="pill"><span id="r-dot" class="dot"></span><span id="r-conn">Connecting…</span></span>
   </div>
-  <p class="muted" id="r-room" style="margin:0 0 16px"></p>
+  <p class="muted" id="r-room" style="margin:0 0 6px"></p>
+  <label class="row hidden" id="r-sound-wrap" style="font-weight:500; margin:0 0 14px"><input type="checkbox" id="r-sound" style="width:auto"> Buzzer sounds and sound effects on the game screen</label>
   <div id="r-wait" class="card empty">Connecting to the game screen…</div>
 
   <div id="r-main" class="stack hidden">
@@ -487,6 +514,13 @@
   </div>
 
   <div id="r-game" class="stack hidden">
+    <button id="r-g-finish-top" class="big btn-ok hidden">🏁 Show the winner</button>
+    <div class="card stack hidden" id="r-g-final">
+      <h2 id="r-g-f-title" style="margin:0"></h2>
+      <ol id="r-g-f-list" class="order"></ol>
+      <button id="r-g-unfinish" class="big secondary">← Back to the board</button>
+      <button id="r-g-restart" class="big secondary">Play this board again (scores reset)</button>
+    </div>
     <div class="card stack hidden" id="r-g-clue">
       <div class="r-key"><div class="lbl" id="r-g-c-top"></div><div class="val" id="r-g-c-text" style="font-weight:500"></div></div>
       <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-g-c-resp"></div></div>
@@ -515,6 +549,7 @@
     </div>
     <button id="r-g-round" class="big secondary"></button>
     <button id="r-g-fj" class="big secondary">🏆 Final Jeopardy</button>
+    <button id="r-g-finish" class="big secondary">🏁 Show the winner</button>
     <button id="r-g-end" class="big secondary">End board game</button>
   </div>
 
@@ -740,6 +775,29 @@
     return () => { try { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.05); setTimeout(() => out.disconnect(), 600); } catch {} };
   }
   const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString();
+  // Original sound effects for the game screen.
+  const SFX = {
+    clue: () => { tone(523, 0, .09, 'sine', .16); tone(784, .07, .22, 'sine', .16); },
+    round: () => [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, i === 4 ? .5 : .2, 'triangle', .22)),
+    win: () => {
+      [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i * .15, i === 5 ? 1 : .17, 'square', .13));
+      tone(131, 0, .45, 'triangle', .25); tone(196, .45, .45, 'triangle', .25); tone(262, .9, 1.1, 'triangle', .25);
+    },
+  };
+  // Final standings: highest score first; tied scores share a place.
+  function standingsOf(list, scores) {
+    const st = list.map((p) => ({ id: p.id, name: p.name, score: scores[p.id] || 0 })).sort((a, b) => b.score - a.score);
+    st.forEach((x, i) => { x.rank = i && x.score === st[i - 1].score ? st[i - 1].rank : i + 1; });
+    return st;
+  }
+  function winnerLine(st) {
+    if (!st.length) return 'Thanks for playing!';
+    const top = st.filter((x) => x.rank === 1);
+    if (top[0].score <= 0) return 'No one finished above $0!';
+    if (top.length > 1) return `It's a tie! ${top.map((x) => x.name).join(' & ')} win with ${money(top[0].score)}`;
+    return `${top[0].name} wins with ${money(top[0].score)}!`;
+  }
+  const ordinal = (n) => { const sfx = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (sfx[(v - 20) % 10] || sfx[v] || sfx[0]); };
   // Boards are written in editor.html and saved in this browser under this key.
   const BOARDS_KEY = 'buzzer-boards-v1', BOARD_CATS = 6, BOARD_ROWS = 5;
   function normalizeBoard(b) {
@@ -962,6 +1020,16 @@
       }
       if (game) {
         const nm = (id) => (game.names && game.names[id]) || 'Someone';
+        if (game.finished) {
+          $('p-clue').classList.add('hidden'); btn.classList.add('hidden'); // no buzzing on the final screen
+          const ranks = standingsOf(Object.entries(game.names || {}).map(([id, name]) => ({ id, name })), game.scores);
+          const mine = ranks.find((x) => x.id === me.clientId), tied = mine && ranks.filter((x) => x.rank === mine.rank).length > 1;
+          if (mine && mine.rank === 1 && mine.score > 0) st.textContent = tied ? '🏆 You tied for first!' : '🏆 You win!';
+          else if (!mine || !ranks.length || ranks[0].score <= 0) st.textContent = 'Game over'; // no winner tonight
+          else st.textContent = `You finished ${tied ? 'tied ' : ''}${ordinal(mine.rank)}`;
+          sub.textContent = `Final score ${money(mine ? mine.score : 0)} · ${winnerLine(ranks)}`;
+          return;
+        }
         if (!cl || cl.stage === 'done') {
           const r = cl && cl.result;
           if (r) {
@@ -1138,6 +1206,8 @@
     hs.players = hs.players || {}; hs.order = hs.order || [];
     hs.round = hs.round || 1; if (hs.jeopardy === undefined) hs.jeopardy = true; if (hs.armed === undefined) hs.armed = !hs.jeopardy;
     hs.hostSecret = hs.hostSecret || randomSecret(); // the host remote's own key
+    if (hs.sound === undefined) hs.sound = true;
+    $('host-sound').checked = hs.sound;
     let rc = null, hc = null, T = ''; // room key + channel, host-remote key; set once derived below
     const lastSeen = new Map(); // player id -> time of last message
     const clients = [];
@@ -1251,7 +1321,7 @@
     }
     function gameEnd() { hs.game = null; gameSnaps = []; delete hs.gameSnaps; reset(); }
     function gamePick(key) {
-      const g = hs.game; if (!g || hs.fj || typeof key !== 'string') return;
+      const g = hs.game; if (!g || hs.fj || g.finished || typeof key !== 'string') return;
       if (g.clue && g.clue.stage !== 'done') return; // finish (or put back) the current clue first
       let at; try { at = clueAt(key); } catch { return; }
       if (at.r !== g.round || !at.q || !at.q.clue.trim() || g.used[key]) return;
@@ -1265,6 +1335,7 @@
       }
       // With Jeopardy rules the buzzers stay locked while the host reads.
       hs.order = []; hs.round++; hs.armed = !hs.jeopardy; changed();
+      sfx('clue');
     }
     // Daily Double wager limits: at least $5, up to the player's score or the round's top value, whichever is more.
     function ddLimits(id) {
@@ -1294,6 +1365,7 @@
       if (!cl || cl.dd || cl.stage === 'done' || hs.armed || answerer()) return;
       hs.armed = true; changed();
     }
+    function sfx(kind) { if ($('host-sound').checked) { try { SFX[kind](); } catch {} } }
     function judgeSound(kind) {
       if (!$('host-sound').checked) return;
       try {
@@ -1353,12 +1425,39 @@
         const ids = Object.keys(hs.players).sort((a, b) => (g.scores[a] || 0) - (g.scores[b] || 0));
         if (ids.length) g.control = ids[0];
       }
-      changed();
+      changed(); sfx('round');
+    }
+    // ---- End of the game: final standings
+    const gameStandings = () => standingsOf(Object.values(hs.players), hs.game.scores);
+    function gameShowWinner() {
+      const g = hs.game; if (!g || g.finished || hs.fj || (g.clue && g.clue.stage !== 'done')) return;
+      g.clue = null; g.finished = true; g.finishedAt = Date.now(); changed(); sfx('win');
+    }
+    function gameUnfinish() { if (hs.game && hs.game.finished) { hs.game.finished = false; changed(); } }
+    function gameRestart() {
+      const g = hs.game; if (!g || hs.fj) return;
+      Object.assign(g, { round: roundHasClues(g.board, 0) || !roundHasClues(g.board, 1) ? 0 : 1, used: {}, scores: {}, control: null, clue: null, finished: false, fjPlayed: false });
+      for (const id of Object.keys(hs.players)) g.scores[id] = 0;
+      gameSnaps = []; hs.gameSnaps = gameSnaps; hs.order = []; hs.armed = false; hs.round++; changed();
+    }
+    let confettiFor = null;
+    function launchConfetti(el) {
+      el.innerHTML = '';
+      const colors = ['#ffd54a', '#e5484d', '#3fbf80', '#5aa9ff', '#ffffff', '#ff9f40'];
+      for (let i = 0; i < 90; i++) {
+        const c = document.createElement('i');
+        c.style.left = Math.random() * 100 + '%';
+        c.style.background = colors[i % colors.length];
+        c.style.animationDuration = 2.5 + Math.random() * 2.5 + 's';
+        c.style.animationDelay = Math.random() * 1.5 + 's';
+        c.style.transform = `rotate(${Math.random() * 360}deg)`;
+        el.appendChild(c);
+      }
     }
     function gamePublic() {
       const g = hs.game; if (!g) return null;
       const names = {}; for (const p of Object.values(hs.players)) names[p.id] = p.name;
-      const out = { title: g.title, round: g.round, scores: g.scores, control: g.control, names, clue: null };
+      const out = { title: g.title, round: g.round, scores: g.scores, control: g.control, names, clue: null, finished: !!g.finished };
       const cl = g.clue;
       if (cl) {
         const { cat, q } = clueAt(cl.key);
@@ -1373,6 +1472,25 @@
       document.body.classList.toggle('game-on', !!g);
       if (!g || hs.fj || fjEditing) return;
       const cl = g.clue, round = g.board.rounds[g.round], ans = answerer();
+      // Final standings
+      $('gt-final').classList.toggle('hidden', !g.finished);
+      $('gt-final-actions').classList.toggle('hidden', !g.finished);
+      $('gt-actions').classList.toggle('hidden', !!g.finished);
+      if (g.finished) {
+        const st = gameStandings();
+        $('gt-f-title').textContent = winnerLine(st);
+        const ol = $('gt-f-list'); ol.innerHTML = '';
+        for (const x of st) {
+          const li = document.createElement('li'); if (x.rank === 1 && x.score > 0) li.className = 'top';
+          li.innerHTML = '<span class="rk"></span><span class="nm"></span><span class="sc"></span>';
+          li.querySelector('.rk').textContent = ordinal(x.rank); li.querySelector('.nm').textContent = x.name; li.querySelector('.sc').textContent = money(x.score);
+          ol.appendChild(li);
+        }
+        if (confettiFor !== g.finishedAt) { confettiFor = g.finishedAt; $('gt-confetti').innerHTML = ''; if (st.length && st[0].score > 0) launchConfetti($('gt-confetti')); }
+        $('gt-board').classList.add('hidden'); $('gt-clue').classList.add('hidden'); $('gt-scores').classList.add('hidden');
+        return;
+      }
+      $('gt-scores').classList.remove('hidden');
       // Board
       const bd = $('gt-board'); bd.innerHTML = ''; bd.classList.toggle('hidden', !!cl);
       for (const cat of round.categories) { const d = document.createElement('div'); d.className = 'gcat'; d.textContent = cat.name; bd.appendChild(d); }
@@ -1426,6 +1544,7 @@
       const other = g.round === 0 ? 1 : 0;
       $('gt-round').textContent = g.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
       $('gt-round').classList.toggle('hidden', !!live || !roundHasClues(g.board, other));
+      $('gt-finish').classList.toggle('hidden', !!live);
     }
     $('gt-open').onclick = gameOpen;
     $('gt-dd-wager').onclick = () => {
@@ -1435,6 +1554,11 @@
       if (v !== null) gameDdWager(String(v).replace(/[$,\s]/g, ''));
     };
     $('gt-dd-reveal').onclick = gameDdReveal;
+    $('gt-finish').onclick = gameShowWinner;
+    $('gt-unfinish').onclick = gameUnfinish;
+    $('gt-restart').onclick = () => { if (confirm('Play this board again? All scores go back to $0.')) gameRestart(); };
+    $('gt-end2').onclick = () => $('gt-end').onclick();
+    $('host-sound').onchange = () => { hs.sound = $('host-sound').checked; save(); publishHostState(true); };
     $('gt-right').onclick = () => gameJudge(true);
     $('gt-wrong').onclick = () => gameJudge(false);
     $('gt-pass').onclick = gamePass;
@@ -1644,7 +1768,9 @@
     function fjExit() {
       if (!hs.fj && !fjEditing) return;
       if (stopMusic) { stopMusic(); stopMusic = null; }
-      hs.fj = null; fjEditing = false; reset();
+      hs.fj = null; fjEditing = false;
+      if (hs.game) hs.game.fjPlayed = true; // the remote then offers "Show the winner"
+      reset();
     }
     function fjReveal(id) {
       const f = hs.fj; if (!f || f.stage !== 'reveal') return;
@@ -1710,7 +1836,7 @@
         order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name, at: o.at })),
         players: fjPlayers().map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
         fj: f ? { ...f, remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0, eligible: hs.game ? fjList().map((p) => p.id) : null } : null,
-        music: $('fj-music').checked, musicName: musicFile ? musicFile.name : '',
+        music: $('fj-music').checked, musicName: musicFile ? musicFile.name : '', sound: $('host-sound').checked,
         game: hs.game ? { ...hs.game, answerer: answerer() } : null, canUndo: gameSnaps.length > 0, boards: boardList(),
       };
     }
@@ -1746,6 +1872,10 @@
         case 'game-dd-player': gameDdPlayer(id); break;
         case 'game-dd-wager': gameDdWager(c.amount); break;
         case 'game-dd-reveal': gameDdReveal(); break;
+        case 'game-finish': gameShowWinner(); break;
+        case 'game-unfinish': gameUnfinish(); break;
+        case 'game-restart': gameRestart(); break;
+        case 'sound': $('host-sound').checked = !!c.on; $('host-sound').onchange(); break;
         case 'jeopardy': hs.jeopardy = !!c.on; changed(); break;
         case 'kick': if (hs.players[id]) kick(id); break;
         case 'fj-setup': fjSetup(c.category, c.clue, c.response); break;
@@ -1947,6 +2077,8 @@
       $('r-main').classList.toggle('hidden', !haveGame || !!wait || showFj || showGame);
       $('r-fj').classList.toggle('hidden', !showFj);
       $('r-game').classList.toggle('hidden', !showGame);
+      $('r-sound-wrap').classList.toggle('hidden', !haveGame || !!wait);
+      if (haveGame) $('r-sound').checked = !!g.sound;
       if (!haveGame || wait) return;
       if (showFj) renderFj(); else if (showGame) renderGame(); else renderMain();
     }
@@ -1956,11 +2088,29 @@
       const G = g.game, cl = G.clue, round = G.board.rounds[G.round], ans = G.answerer;
       const nm = (id) => (g.players.find((p) => p.id === id) || {}).name || 'Someone';
       const live = cl && cl.stage !== 'done';
+      // Final standings
+      $('r-g-final').classList.toggle('hidden', !G.finished);
+      $('r-g-finish-top').classList.toggle('hidden', !!G.finished || !G.fjPlayed || !!live);
+      $('r-g-finish').classList.toggle('hidden', !!G.finished || !!live || !!G.fjPlayed);
+      if (G.finished) {
+        const st = standingsOf(g.players, G.scores);
+        $('r-g-f-title').textContent = winnerLine(st);
+        const ol = $('r-g-f-list'); ol.innerHTML = '';
+        st.forEach((x) => {
+          const li = document.createElement('li'); if (x.rank === 1 && x.score > 0) li.className = 'first';
+          li.innerHTML = '<span class="pos"></span><span class="name"></span><span class="delta"></span>';
+          li.querySelector('.pos').textContent = ordinal(x.rank); li.querySelector('.name').textContent = x.name; li.querySelector('.delta').textContent = money(x.score);
+          ol.appendChild(li);
+        });
+      }
+      $('r-g-boardwrap').classList.toggle('hidden', !!G.finished);
+      $('r-g-round').classList.toggle('hidden', !!G.finished);
+      $('r-g-fj').classList.toggle('hidden', !!G.finished);
       $('r-g-title').textContent = G.board.title;
       $('r-g-roundlbl').textContent = `Round ${G.round + 1}`;
       // Clue panel
-      $('r-g-clue').classList.toggle('hidden', !cl);
-      $('r-g-boardwrap').classList.toggle('hidden', !!live);
+      $('r-g-clue').classList.toggle('hidden', !cl || !!G.finished);
+      $('r-g-boardwrap').classList.toggle('hidden', !!live || !!G.finished);
       if (cl) {
         const [r, c, i] = cl.key.split('-').map(Number), cat = G.board.rounds[r].categories[c], q = cat.clues[i];
         const dd = cl.dd;
@@ -2033,7 +2183,7 @@
       $('r-g-undo').disabled = !g.canUndo;
       const other = G.round === 0 ? 1 : 0;
       $('r-g-round').textContent = G.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
-      $('r-g-round').classList.toggle('hidden', !!live || !roundHasClues(G.board, other));
+      $('r-g-round').classList.toggle('hidden', !!live || !!G.finished || !roundHasClues(G.board, other));
     }
     // Same limits the game screen uses: $5 up to the player's score or the round's top value.
     function ddLimitsR(G, id) {
@@ -2048,6 +2198,13 @@
       cmd({ cmd: 'game-dd-wager', amount: v }); $('r-g-dd-wager').value = '';
     };
     $('r-g-dd-reveal').onclick = () => cmd({ cmd: 'game-dd-reveal' });
+    $('r-g-finish').onclick = $('r-g-finish-top').onclick = () => {
+      if (!g.game.fjPlayed && !confirm('Show the final scores now? You can go back to the board afterwards.')) return;
+      cmd({ cmd: 'game-finish' });
+    };
+    $('r-g-unfinish').onclick = () => cmd({ cmd: 'game-unfinish' });
+    $('r-g-restart').onclick = () => { if (confirm('Play this board again? All scores go back to $0.')) cmd({ cmd: 'game-restart' }); };
+    $('r-sound').onchange = () => cmd({ cmd: 'sound', on: $('r-sound').checked });
     $('r-g-open').onclick = () => cmd({ cmd: 'arm', on: true });
     $('r-g-right').onclick = () => cmd({ cmd: 'game-judge', correct: true });
     $('r-g-wrong').onclick = () => cmd({ cmd: 'game-judge', correct: false });
