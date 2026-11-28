@@ -108,9 +108,31 @@
   .host-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .host-actions button { flex: 1; min-width: 140px; }
   #reset-btn { font-size: 18px; padding: 16px; }
-  #lock-btn.open-now { background: var(--ok); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
-  #lock-btn.lock-now { background: var(--accent); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
+  .open-now, #lock-btn.open-now { background: var(--ok); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
+  .lock-now, #lock-btn.lock-now { background: var(--accent); color: #fff; border-color: transparent; font-size: 18px; padding: 16px; }
   .flash { animation: flash .5s ease-out; }
+
+  /* ---------- Game screen + host remote ---------- */
+  .remote-only { display: none; }
+  body.remote-on:not(.controls-forced) .tv-control { display: none !important; }
+  body.remote-on:not(.controls-forced) .remote-only { display: inline; }
+  .banner { background: var(--warn); color: #111; border-radius: 12px; padding: 12px 16px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+  .linklike { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; font-weight: 500; font-size: 14px; }
+  dialog { border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--panel); color: var(--text); width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog .body { padding: 20px; }
+  dialog h3 { margin: 0; font-size: 20px; }
+  .qrbox { background: #fff; padding: 10px; border-radius: 10px; line-height: 0; flex: 0 0 auto; }
+  .qrbox svg { width: 180px; height: 180px; }
+  #view-remote { max-width: 600px; }
+  #view-remote h1 { font-size: 22px; margin: 0; }
+  .r-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .r-key { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .r-key .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .r-key .val { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+  .r-key .val.resp { color: var(--ok); }
+  .r-ans { font-size: 16px; overflow-wrap: anywhere; }
+  .r-ans.dim { color: var(--muted); }
 
   /* ---------- Final Jeopardy ---------- */
   textarea { resize: vertical; line-height: 1.4; }
@@ -228,11 +250,17 @@
 
 <!-- ============ HOST ============ -->
 <section id="view-host" class="wrap hidden">
+  <div id="sound-banner" class="banner hidden">🔇 Click or tap anywhere on this screen once to turn on sound.</div>
   <div class="host-head">
     <div>
       <h2>Room code</h2>
       <div id="room-code" class="room-code">····</div>
       <div class="muted" style="margin-top:8px"><span id="host-conn">Starting…</span></div>
+      <div class="row" style="margin-top:8px; gap:12px">
+        <button id="remote-btn" class="secondary" style="padding:8px 12px">📱 Host remote</button>
+        <span id="remote-status" style="color:var(--ok); font-weight:600"></span>
+        <button id="controls-toggle" class="linklike hidden">Show controls on this screen</button>
+      </div>
     </div>
     <div class="join-box">
       <div>
@@ -248,11 +276,11 @@
       <h2>Buzz order</h2>
       <ol id="order" class="order"></ol>
       <div id="order-empty" class="empty">Waiting for someone to buzz…</div>
-      <div class="host-actions">
+      <div class="host-actions tv-control">
         <button id="reset-btn" class="secondary">New question (N)</button>
         <button id="lock-btn" class="secondary">Open buzzers (space)</button>
       </div>
-      <div class="host-actions">
+      <div class="host-actions tv-control">
         <button id="fj-open" class="secondary">🏆 Final Jeopardy</button>
       </div>
     </div>
@@ -263,11 +291,11 @@
       <div class="host-actions">
         <label class="row" style="font-weight:500; margin:0"><input type="checkbox" id="host-sound" checked style="width:auto"> Play sounds here</label>
       </div>
-      <div class="host-actions">
+      <div class="host-actions tv-control">
         <label class="row" style="font-weight:500; margin:0; align-items:flex-start"><input type="checkbox" id="jeopardy" checked style="width:auto; margin-top:4px">
           <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked. Buzzing before you open the buzzers locks that player out for ¼ second.</span></span></label>
       </div>
-      <div class="host-actions">
+      <div class="host-actions tv-control">
         <button id="new-room" class="secondary">New room</button>
       </div>
     </div>
@@ -281,7 +309,11 @@
       <div>
         <label for="fj-clue-in">Clue</label>
         <textarea id="fj-clue-in" rows="3" maxlength="400" autocomplete="off" class="masked"></textarea>
-        <label class="row" style="font-weight:500; margin-top:8px"><input type="checkbox" id="fj-show-clue" style="width:auto"> Show clue while typing</label>
+      </div>
+      <div>
+        <label for="fj-resp-in">Correct response <span class="muted" style="font-weight:500">(shown only on the host remote)</span></label>
+        <input id="fj-resp-in" maxlength="160" autocomplete="off" class="masked">
+        <label class="row" style="font-weight:500; margin-top:8px"><input type="checkbox" id="fj-show-clue" style="width:auto"> Show clue and response while typing</label>
       </div>
       <div id="fj-setup-err" class="err hidden"></div>
       <div class="host-actions">
@@ -300,14 +332,14 @@
       <h2 id="fjh-chips-title" style="margin-top:20px"></h2>
       <div id="fjh-chips" class="chips"></div>
       <ol id="fjh-reveal" class="fj-reveal hidden"></ol>
-      <div class="host-actions">
+      <div class="host-actions tv-control">
         <button id="fjh-start" class="btn-ok">Reveal clue &amp; start 32 seconds</button>
         <button id="fjh-edit" class="secondary">Edit category / clue</button>
         <button id="fjh-skip" class="secondary">End timer now</button>
       </div>
       <div class="host-actions" style="align-items:center">
         <label class="row" style="font-weight:500; margin:0; flex:1"><input type="checkbox" id="fj-music" checked style="width:auto"> Play thinking music</label>
-        <button id="fjh-exit" class="secondary">Finish Final Jeopardy</button>
+        <button id="fjh-exit" class="secondary tv-control">Finish Final Jeopardy</button>
       </div>
       <div class="music-row">
         <div class="grow">Music: <strong id="fj-music-name">Built-in tune</strong>
@@ -317,6 +349,83 @@
         <button id="fj-music-preview" class="secondary">▶ Preview</button>
         <button id="fj-music-clear" class="secondary hidden">Use built-in tune</button>
       </div>
+    </div>
+  </div>
+</section>
+
+<dialog id="remote-dialog">
+  <div class="body stack">
+    <h3>Connect the host remote</h3>
+    <p style="margin:0">Scan this with <strong>the host's phone</strong>. It opens the host remote, which runs the game and shows the correct responses.</p>
+    <p class="err" style="margin:0">Don't let players scan this code.</p>
+    <div class="row" style="align-items:flex-start">
+      <div id="remote-qr" class="qrbox"></div>
+      <div class="grow stack">
+        <button id="remote-copy" class="secondary">Copy link</button>
+        <button id="remote-reset" class="secondary">New host key</button>
+        <div class="muted" style="font-size:13px">A new key disconnects any remote already connected. Use it if someone else might have scanned this.</div>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end"><button id="remote-close">Done</button></div>
+  </div>
+</dialog>
+
+<!-- ============ HOST REMOTE (host's phone) ============ -->
+<section id="view-remote" class="wrap hidden">
+  <div class="r-top">
+    <h1>Host remote</h1>
+    <span class="pill"><span id="r-dot" class="dot"></span><span id="r-conn">Connecting…</span></span>
+  </div>
+  <p class="muted" id="r-room" style="margin:0 0 16px"></p>
+  <div id="r-wait" class="card empty">Connecting to the game screen…</div>
+
+  <div id="r-main" class="stack hidden">
+    <div class="card stack">
+      <button id="r-arm" class="big">Open buzzers</button>
+      <button id="r-new" class="big secondary">New question</button>
+      <div>
+        <h2>Buzz order</h2>
+        <ol id="r-order" class="order"></ol>
+        <div id="r-order-empty" class="empty"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Players (<span id="r-count">0</span>)</h2>
+      <ul id="r-players" class="players"></ul>
+      <div id="r-players-empty" class="empty">No one has joined yet.</div>
+      <label class="row" style="font-weight:500; margin-top:12px; align-items:flex-start"><input type="checkbox" id="r-jeopardy" style="width:auto; margin-top:4px">
+        <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked; buzzing early locks a player out for ¼ second.</span></span></label>
+    </div>
+    <button id="r-fj-open" class="big secondary">🏆 Final Jeopardy</button>
+  </div>
+
+  <div id="r-fj" class="stack hidden">
+    <form id="r-fj-setup" class="card stack hidden" novalidate>
+      <h2>Final Jeopardy</h2>
+      <div><label for="r-fj-cat-in">Category</label><input id="r-fj-cat-in" maxlength="80" autocomplete="off"></div>
+      <div><label for="r-fj-clue-in">Clue</label><textarea id="r-fj-clue-in" rows="3" maxlength="400" autocomplete="off"></textarea></div>
+      <div><label for="r-fj-resp-in">Correct response <span class="muted" style="font-weight:500">(only you see this)</span></label><input id="r-fj-resp-in" maxlength="160" autocomplete="off"></div>
+      <div id="r-fj-err" class="err hidden"></div>
+      <button type="submit" class="big btn-ok">Show category &amp; take bets</button>
+      <button type="button" id="r-fj-cancel" class="secondary">Cancel</button>
+    </form>
+    <div id="r-fj-live" class="stack hidden">
+      <div class="card stack">
+        <div class="r-key"><div class="lbl">Category</div><div class="val" id="r-fj-cat"></div></div>
+        <div class="r-key"><div class="lbl">Clue <span id="r-fj-clue-note"></span></div><div class="val" id="r-fj-clue" style="font-weight:500"></div></div>
+        <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-fj-resp"></div></div>
+        <div id="r-fj-timer" class="fj-timer hidden" style="text-align:center; color:var(--warn)"></div>
+      </div>
+      <div class="card">
+        <h2 id="r-fj-chips-title"></h2>
+        <div id="r-fj-chips" class="chips"></div>
+        <ol id="r-fj-reveal" class="fj-reveal hidden"></ol>
+      </div>
+      <button id="r-fj-start" class="big btn-ok">Reveal clue &amp; start 32 seconds</button>
+      <button id="r-fj-edit" class="secondary">Edit category / clue</button>
+      <button id="r-fj-skip" class="secondary">End timer now</button>
+      <label class="row" style="font-weight:500"><input type="checkbox" id="r-fj-music" style="width:auto"> Play thinking music on the game screen <span class="muted" id="r-fj-music-name"></span></label>
+      <button id="r-fj-exit" class="secondary">Finish Final Jeopardy</button>
     </div>
   </div>
 </section>
@@ -347,6 +456,16 @@
       { name: 'PBKDF2', hash: 'SHA-256', salt: te.encode('gamebuzzer-v3/room-key'), iterations: 150000 }, base, 384));
     const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-GCM', false, ['encrypt', 'decrypt']);
     const topic = 'gamebuzzer-v3/' + [...bits.slice(32, 48)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    return { topic, ...makeCodec(key) };
+  }
+  // The host remote has its own secret (only in the remote's link), so players can't read the
+  // correct responses or send commands, even though they know the room code.
+  async function hostCrypto(secret) {
+    const raw = await crypto.subtle.digest('SHA-256', te.encode('gamebuzzer-host-v1:' + secret));
+    return makeCodec(await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt', 'decrypt']));
+  }
+  const randomSecret = () => b64(crypto.getRandomValues(new Uint8Array(16))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  function makeCodec(key) {
     const seal = async (obj) => {
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, te.encode(JSON.stringify(obj))));
@@ -364,7 +483,7 @@
     // Encrypting/decrypting is asynchronous; run everything through queues so messages keep their order.
     let outQ = Promise.resolve(), inQ = Promise.resolve();
     return {
-      topic, seal,
+      seal,
       // send(obj, fn): encrypt obj (null = empty, used to clear saved messages) then call fn(payload)
       send(obj, fn) { outQ = outQ.then(() => (obj === null ? '' : seal(obj))).then(fn).catch((e) => console.warn(e)); },
       // recv(buf, fn): decrypt then call fn(msg, arrivalTime); undecryptable messages are dropped
@@ -394,6 +513,7 @@
   const fmtCode = (c) => c.slice(0, 4) + (c.length > 4 ? '-' + c.slice(4) : '');
   // The room code lives after the # in links: browsers never send that part to the web server.
   const hashRoom = () => cleanCode(new URLSearchParams(location.hash.slice(1)).get('room') || '');
+  const hashHost = () => (new URLSearchParams(location.hash.slice(1)).get('host') || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
   const linkFor = (code) => {
     const u = new URL(location.pathname, location.origin);
     for (const [k, v] of extraParams()) u.searchParams.set(k, v);
@@ -807,15 +927,20 @@
     hs.hostId = hs.hostId || uid();
     hs.players = hs.players || {}; hs.order = hs.order || [];
     hs.round = hs.round || 1; if (hs.jeopardy === undefined) hs.jeopardy = true; if (hs.armed === undefined) hs.armed = !hs.jeopardy;
-    let rc = null, T = ''; // room key + channel, set once derived below
+    hs.hostSecret = hs.hostSecret || randomSecret(); // the host remote's own key
+    let rc = null, hc = null, T = ''; // room key + channel, host-remote key; set once derived below
     const lastSeen = new Map(); // player id -> time of last message
     const clients = [];
     const save = () => store.set('buzzer-host', hs);
 
     // The browser blocks sound (and keeping the screen on) until the host taps the page once.
-    const unlock = () => { audio(); keepAwake(); };
+    const unlock = () => { audio(); keepAwake(); setTimeout(renderSoundBanner, 100); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
     keepAwake();
+    // Browsers keep a page silent until someone clicks it; say so, since the remote can't do it.
+    function renderSoundBanner() { $('sound-banner').classList.toggle('hidden', !!(ctx && ctx.state === 'running')); }
+    try { audio(); ctx.addEventListener('statechange', renderSoundBanner); } catch {}
+    setTimeout(renderSoundBanner, 300);
 
     const joinUrl = () => linkFor(hs.code);
     function renderHead() {
@@ -840,7 +965,7 @@
         ol.appendChild(li);
       });
       $('order-empty').classList.toggle('hidden', hs.order.length > 0);
-      $('order-empty').textContent = hs.armed ? 'Buzzers are open. Waiting for someone to buzz…' : 'Buzzers are locked. Press space to open them.';
+      $('order-empty').textContent = hs.armed ? 'Buzzers are open. Waiting for someone to buzz…' : remoteOn() ? 'Buzzers are locked.' : 'Buzzers are locked. Press space to open them.';
       $('lock-btn').textContent = hs.armed ? 'Lock buzzers (space)' : 'Open buzzers (space)';
       $('lock-btn').classList.toggle('open-now', !hs.armed);
       $('lock-btn').classList.toggle('lock-now', hs.armed && hs.jeopardy && !hs.order.length);
@@ -852,7 +977,7 @@
       for (const p of list) {
         const online = isOnline(p.id);
         const li = document.createElement('li'); if (!online) li.className = 'offline';
-        li.innerHTML = `<span class="dot"></span><span class="name"></span><button class="secondary" style="padding:4px 10px" title="Play their sound">🔊</button><button class="x" title="Remove player">×</button>`;
+        li.innerHTML = `<span class="dot"></span><span class="name"></span><button class="secondary" style="padding:4px 10px" title="Play their sound">🔊</button><button class="x tv-control" title="Remove player">×</button>`;
         li.querySelector('.dot').classList.toggle('on', online);
         li.querySelector('.name').textContent = p.name + (online ? '' : ' (offline)');
         li.querySelector('.secondary').onclick = () => playSound(p.sound);
@@ -935,17 +1060,18 @@
         li.querySelector('strong').textContent = p.name;
         li.querySelector('.who .muted').textContent = b ? `Score ${money(b.score)}` : 'No bet';
         const ansEl = li.querySelector('.ans'), res = li.querySelector('.res');
-        const btn = (label, cls, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = cls; x.onclick = () => { fn(); x.blur(); }; return x; };
+        const btn = (label, cls, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = cls + ' tv-control'; x.onclick = () => { fn(); x.blur(); }; return x; };
         if (!r.shown) {
-          ansEl.appendChild(btn('Reveal answer', '', () => { f.reveal[p.id] = { shown: true }; changed(); }));
+          const wait = document.createElement('span'); wait.className = 'muted remote-only'; wait.textContent = '…';
+          ansEl.append(btn('Reveal answer', '', () => fjReveal(p.id)), wait);
         } else {
           ansEl.textContent = ans || '(no answer)'; if (!ans) ansEl.classList.add('none');
           if (r.correct === undefined) {
-            res.append(btn('✓ Right', 'btn-ok', () => { r.correct = true; changed(); }), ' ', btn('✗ Wrong', 'btn-bad', () => { r.correct = false; changed(); }));
+            res.append(btn('✓ Right', 'btn-ok', () => fjJudge(p.id, true)), ' ', btn('✗ Wrong', 'btn-bad', () => fjJudge(p.id, false)));
           } else {
             const bet = b ? b.bet : 0;
             res.textContent = `${r.correct ? '+' : '−'}${money(bet)}` + (b ? ` → ${money(b.score + (r.correct ? bet : -bet))}` : '') + ' ';
-            res.appendChild(btn('Undo', 'secondary', () => { delete r.correct; changed(); }));
+            res.appendChild(btn('Undo', 'secondary', () => fjJudge(p.id, null)));
           }
         }
         ol.appendChild(li);
@@ -966,7 +1092,7 @@
       renderFjTimer();
       // Small grace period so answers typed in the last instant still arrive.
       if (Date.now() >= f.endsAt + FJ_GRACE_MS) fjEndTimer();
-      else if (Date.now() - lastFjBroadcast > 5000) { lastFjBroadcast = Date.now(); broadcast(); } // keeps late joiners' clocks right
+      else if (Date.now() - lastFjBroadcast > 5000) { lastFjBroadcast = Date.now(); broadcast(); publishHostState(true); } // keeps late joiners' clocks right
     }, 250);
     // ---- Optional music file chosen by the host. Kept in this browser only (IndexedDB), never uploaded.
     const MAX_MUSIC_BYTES = 40 * 1024 * 1024;
@@ -1025,38 +1151,63 @@
       setTimeout(() => { if (stopPreview === me) { stopPreview = null; $('fj-music-preview').textContent = '▶ Preview'; } }, FJ_MS);
     };
 
-    function fjFillSetup() {
-      $('fj-cat-in').value = hs.fj ? hs.fj.category : (hs.fjDraft || {}).category || '';
-      $('fj-clue-in').value = hs.fj ? hs.fj.clue : (hs.fjDraft || {}).clue || '';
-      $('fj-show-clue').checked = false; $('fj-clue-in').classList.add('masked');
-      $('fj-setup-err').classList.add('hidden');
-    }
-    $('fj-open').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); $('fj-cat-in').focus(); };
-    $('fj-show-clue').onchange = () => $('fj-clue-in').classList.toggle('masked', !$('fj-show-clue').checked);
-    for (const id of ['fj-cat-in', 'fj-clue-in']) $(id).addEventListener('input', () => { if (!hs.fj) { hs.fjDraft = { category: $('fj-cat-in').value, clue: $('fj-clue-in').value }; save(); } });
-    $('fj-cancel').onclick = () => { fjEditing = false; renderAll(); };
-    $('fj-go').onclick = () => {
-      const category = $('fj-cat-in').value.trim(), clue = $('fj-clue-in').value.trim();
-      if (!category || !clue) { $('fj-setup-err').textContent = 'Enter both a category and a clue.'; $('fj-setup-err').classList.remove('hidden'); return; }
-      if (hs.fj) Object.assign(hs.fj, { category, clue }); // editing during betting keeps the bets
-      else hs.fj = { id: uid(), stage: 'betting', category, clue, endsAt: 0, bets: {}, answers: {}, reveal: {} };
+    // Final Jeopardy actions. The TV's buttons and the host remote both use these.
+    function fjSetup(category, clue, response) {
+      category = String(category || '').trim().slice(0, 80); clue = String(clue || '').trim().slice(0, 400); response = String(response || '').trim().slice(0, 160);
+      if (!category || !clue) return false;
+      if (hs.fj) { if (hs.fj.stage !== 'betting') return false; Object.assign(hs.fj, { category, clue, response }); } // editing keeps the bets
+      else hs.fj = { id: uid(), stage: 'betting', category, clue, response, endsAt: 0, bets: {}, answers: {}, reveal: {} };
       delete hs.fjDraft; hs.armed = false; fjEditing = false; changed();
-    };
-    $('fjh-edit').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); };
-    $('fjh-start').onclick = () => {
-      const missing = fjPlayers().filter((p) => !hs.fj.bets[p.id]).length;
-      if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
+      return true;
+    }
+    const fjMissingBets = () => (hs.fj ? fjPlayers().filter((p) => !hs.fj.bets[p.id]).length : 0);
+    function fjStartClue() {
+      if (!hs.fj || hs.fj.stage !== 'betting') return;
       hs.fj.stage = 'clue'; hs.fj.endsAt = Date.now() + FJ_MS; lastFjBroadcast = Date.now(); changed();
       if (stopMusic) stopMusic();
       if (stopPreview) $('fj-music-preview').click();
       stopMusic = $('fj-music').checked ? startMusic(FJ_MS) : null;
-    };
-    $('fj-music').onchange = () => { if (!$('fj-music').checked && stopMusic) { stopMusic(); stopMusic = null; } };
-    $('fjh-skip').onclick = () => { if (stopMusic) { stopMusic(); stopMusic = null; } fjEndTimer(); };
-    $('fjh-exit').onclick = () => {
-      if (hs.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+    }
+    function fjSkip() { if (stopMusic) { stopMusic(); stopMusic = null; } fjEndTimer(); }
+    function fjExit() {
+      if (!hs.fj && !fjEditing) return;
       if (stopMusic) { stopMusic(); stopMusic = null; }
       hs.fj = null; fjEditing = false; reset();
+    }
+    function fjReveal(id) {
+      const f = hs.fj; if (!f || f.stage !== 'reveal') return;
+      if (!(f.reveal[id] && f.reveal[id].shown)) { f.reveal[id] = { shown: true }; changed(); }
+    }
+    function fjJudge(id, correct) {
+      const f = hs.fj, r = f && f.stage === 'reveal' && f.reveal[id]; if (!r || !r.shown) return;
+      if (correct === true || correct === false) r.correct = correct; else delete r.correct;
+      changed();
+    }
+
+    function fjFillSetup() {
+      const src = hs.fj || hs.fjDraft || {};
+      $('fj-cat-in').value = src.category || ''; $('fj-clue-in').value = src.clue || ''; $('fj-resp-in').value = src.response || '';
+      $('fj-show-clue').checked = false; $('fj-clue-in').classList.add('masked'); $('fj-resp-in').classList.add('masked');
+      $('fj-setup-err').classList.add('hidden');
+    }
+    $('fj-open').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); $('fj-cat-in').focus(); };
+    $('fj-show-clue').onchange = () => { for (const id of ['fj-clue-in', 'fj-resp-in']) $(id).classList.toggle('masked', !$('fj-show-clue').checked); };
+    for (const id of ['fj-cat-in', 'fj-clue-in', 'fj-resp-in']) $(id).addEventListener('input', () => { if (!hs.fj) { hs.fjDraft = { category: $('fj-cat-in').value, clue: $('fj-clue-in').value, response: $('fj-resp-in').value }; save(); } });
+    $('fj-cancel').onclick = () => { fjEditing = false; renderAll(); };
+    $('fj-go').onclick = () => {
+      if (!fjSetup($('fj-cat-in').value, $('fj-clue-in').value, $('fj-resp-in').value)) { $('fj-setup-err').textContent = 'Enter both a category and a clue.'; $('fj-setup-err').classList.remove('hidden'); }
+    };
+    $('fjh-edit').onclick = () => { fjEditing = true; fjFillSetup(); renderFj(); };
+    $('fjh-start').onclick = () => {
+      const missing = fjMissingBets();
+      if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
+      fjStartClue();
+    };
+    $('fj-music').onchange = () => { if (!$('fj-music').checked && stopMusic) { stopMusic(); stopMusic = null; } publishHostState(true); };
+    $('fjh-skip').onclick = fjSkip;
+    $('fjh-exit').onclick = () => {
+      if (hs.fj && hs.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+      fjExit();
     };
 
     const stateMsg = () => ({
@@ -1068,7 +1219,78 @@
     function publishAll(topic, obj, opts) { if (rc) rc.send(obj, (p) => { for (const c of clients) if (c.connected) c.publish(topic, p, opts); }); }
     function publishTo(c, topic, obj, opts) { if (rc) rc.send(obj, (p) => c.publish(topic, p, opts)); }
     const broadcast = () => publishAll(T + '/state', stateMsg(), { qos: 1, retain: true });
-    const changed = () => { save(); renderAll(); broadcast(); };
+    const changed = () => { save(); renderAll(); broadcast(); publishHostState(); };
+
+    // ---- Host remote: the host's phone sends commands and gets the full (private) game state.
+    let remoteSeen = 0, lastHsKey = '', lastHsAt = 0;
+    const seenCmds = new Set();
+    const remoteOn = () => Date.now() - remoteSeen < OFFLINE_AFTER_MS;
+    function hostStateMsg() {
+      const f = hs.fj;
+      return {
+        t: 'hs', code: hs.code, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy,
+        order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name, at: o.at })),
+        players: fjPlayers().map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
+        fj: f ? { ...f, remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0 } : null,
+        music: $('fj-music').checked, musicName: musicFile ? musicFile.name : '',
+      };
+    }
+    function publishHostState(force) {
+      if (!hc) return;
+      const m = hostStateMsg(), key = JSON.stringify({ ...m, fj: m.fj && { ...m.fj, remaining: 0 } });
+      if (!force && key === lastHsKey && Date.now() - lastHsAt < 5000) return;
+      lastHsKey = key; lastHsAt = Date.now();
+      hc.send(m, (p) => { for (const c of clients) if (c.connected) c.publish(T + '/hs', p, { qos: 1, retain: true }); });
+    }
+    function command(c) {
+      if (!c || typeof c.cmd !== 'string') return;
+      const wasOn = remoteOn(); remoteSeen = Date.now();
+      if (!wasOn) { renderRemote(); renderOrder(); }
+      if ($('remote-dialog').open) $('remote-dialog').close(); // paired: hide the code
+      if (c.cid) { if (seenCmds.has(c.cid)) return; seenCmds.add(c.cid); if (seenCmds.size > 500) seenCmds.clear(); }
+      const id = typeof c.id === 'string' ? c.id.slice(0, 40) : '';
+      switch (c.cmd) {
+        case 'hello': publishHostState(true); break;
+        case 'arm': if (!hs.fj) { hs.armed = !!c.on; changed(); } break;
+        case 'new': if (!hs.fj) reset(); break;
+        case 'jeopardy': hs.jeopardy = !!c.on; changed(); break;
+        case 'kick': if (hs.players[id]) kick(id); break;
+        case 'fj-setup': fjSetup(c.category, c.clue, c.response); break;
+        case 'fj-start': fjStartClue(); break;
+        case 'fj-skip': fjSkip(); break;
+        case 'fj-reveal': fjReveal(id); break;
+        case 'fj-judge': fjJudge(id, c.correct); break;
+        case 'fj-exit': fjExit(); break;
+        case 'fj-music': $('fj-music').checked = !!c.on; $('fj-music').onchange(); break;
+      }
+    }
+    function renderRemote() {
+      const on = remoteOn(), forced = document.body.classList.contains('controls-forced');
+      document.body.classList.toggle('remote-on', on);
+      $('remote-status').textContent = on ? '● Host remote connected' : '';
+      $('controls-toggle').classList.toggle('hidden', !on);
+      $('controls-toggle').textContent = forced ? 'Hide controls' : 'Show controls on this screen';
+    }
+    const remoteUrl = () => { const u = new URL(linkFor(hs.code)); u.hash = `room=${hs.code}&host=${hs.hostSecret}`; return u.toString(); };
+    function renderRemoteQr() {
+      $('remote-qr').innerHTML = '';
+      if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(remoteUrl()); q.make(); $('remote-qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+    }
+    $('remote-btn').onclick = () => { renderRemoteQr(); $('remote-dialog').showModal(); };
+    $('remote-close').onclick = () => $('remote-dialog').close();
+    $('remote-copy').onclick = async () => {
+      try { await navigator.clipboard.writeText(remoteUrl()); $('remote-copy').textContent = 'Copied! Send it only to the host.'; }
+      catch { $('remote-copy').textContent = 'Copy failed'; }
+      setTimeout(() => ($('remote-copy').textContent = 'Copy link'), 2500);
+    };
+    $('remote-reset').onclick = async () => {
+      if (!confirm('Make a new host key? Any host remote already connected stops working until it scans the new code.')) return;
+      publishAll(T + '/hs', null, { qos: 1, retain: true }); // clear what the old key could read
+      hs.hostSecret = randomSecret(); save();
+      hc = await hostCrypto(hs.hostSecret);
+      remoteSeen = 0; renderRemote(); renderRemoteQr(); publishHostState(true);
+    };
+    $('controls-toggle').onclick = () => { document.body.classList.toggle('controls-forced'); renderRemote(); };
 
     // New question: clear the order. With Jeopardy rules the buzzers stay locked until the host opens them.
     function reset() { hs.order = []; hs.armed = !hs.jeopardy; hs.round++; changed(); }
@@ -1119,21 +1341,27 @@
       for (const url of BROKERS) {
         const c = mqtt.connect(url, mqttOpts({ will: { topic: T + '/host', payload: willPayload, qos: 1, retain: true } }));
         c.on('connect', () => {
-          c.subscribe([T + '/in', T + '/host'], { qos: 1 });
+          c.subscribe([T + '/in', T + '/host', T + '/ctl'], { qos: 1 });
           publishTo(c, T + '/host', hostMsg(true), { qos: 1, retain: true });
           publishTo(c, T + '/state', stateMsg(), { qos: 1, retain: true });
+          publishHostState(true);
           renderConn();
         });
-        c.on('message', (topic, buf) => rc.recv(buf, (msg, at) => {
-          if (topic === T + '/in') handle(msg, at);
-          // Someone else is hosting this code (very unlikely): move to a new room.
-          else if (topic === T + '/host' && msg && msg.online && msg.hostId !== hs.hostId) newRoom(true);
-          // A stale "offline" from our own previous visit: correct it.
-          else if (topic === T + '/host' && msg && !msg.online && msg.hostId === hs.hostId) publishTo(c, T + '/host', hostMsg(true), { qos: 1, retain: true });
-        }));
+        c.on('message', (topic, buf) => {
+          // Commands from the host remote use the host key; everything else uses the room key.
+          if (topic === T + '/ctl') { if (hc) hc.recv(buf, command); return; }
+          rc.recv(buf, (msg, at) => handleRoom(topic, msg, at, c));
+        });
         c.on('offline', renderConn); c.on('close', renderConn); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
         clients.push(c);
       }
+    }
+    function handleRoom(topic, msg, at, c) {
+      if (topic === T + '/in') handle(msg, at);
+      // Someone else is hosting this code (very unlikely): move to a new room.
+      else if (topic === T + '/host' && msg && msg.online && msg.hostId !== hs.hostId) newRoom(true);
+      // A stale "offline" from our own previous visit: correct it.
+      else if (topic === T + '/host' && msg && !msg.online && msg.hostId === hs.hostId) publishTo(c, T + '/host', hostMsg(true), { qos: 1, retain: true });
     }
 
     function newRoom(silent) {
@@ -1142,6 +1370,7 @@
       // Clear this room's saved messages from the servers.
       publishAll(T + '/state', null, { qos: 1, retain: true });
       publishAll(T + '/host', null, { qos: 1, retain: true });
+      publishAll(T + '/hs', null, { qos: 1, retain: true });
       store.del('buzzer-host');
       setTimeout(() => location.reload(), 400);
     }
@@ -1168,12 +1397,232 @@
       if (document.visibilityState !== 'visible') return;
       for (const c of clients) if (!c.connected) { try { c.reconnect(); } catch {} }
     });
-    setInterval(renderPlayers, 5000);
+    setInterval(() => { renderPlayers(); renderRemote(); publishHostState(); }, 5000);
 
-    renderHead(); renderAll(); renderConn();
+    renderHead(); renderAll(); renderConn(); renderRemote();
     rc = await roomCrypto(hs.code); T = rc.topic;
+    hc = await hostCrypto(hs.hostSecret); save();
     const willPayload = await rc.seal(hostMsg(false));
     connectAll();
+  }
+
+  // ================================================================= HOST REMOTE (host's phone)
+  // Sends commands to the game screen and shows the full game, including correct responses.
+  async function startRemote(code, secret) {
+    show('view-remote');
+    $('r-room').textContent = `Room ${fmtCode(code)}`;
+    document.title = `Host remote · ${fmtCode(code)}`;
+    let rc = null, hc = null, T = '', client = null, brokerIdx = 0, lastUp = Date.now(), connectedAt = 0;
+    let tvOnline = null, g = null, fjEnd = 0, fjForm = false; // g: the game state from the game screen
+    const isConnected = () => client && client.connected;
+    function cmd(c) {
+      if (!isConnected() || !hc) return;
+      const cc = client;
+      hc.send({ ...c, cid: uid() }, (p) => cc.publish(T + '/ctl', p, { qos: 1 }));
+    }
+    const fjPlayers = () => (g ? g.players : []);
+
+    function render() {
+      const conn = isConnected(), haveGame = !!g;
+      const setPill = (on, text) => { $('r-dot').classList.toggle('on', on); $('r-conn').textContent = text; };
+      if (!conn) setPill(false, 'Connecting…');
+      else if (tvOnline === false) setPill(false, 'Game screen offline');
+      else if (!haveGame) setPill(true, 'Connected');
+      else setPill(true, 'Connected');
+      let wait = '';
+      if (!conn) wait = 'Connecting…';
+      else if (tvOnline === false) wait = 'The game screen is offline. Check that its page is still open.';
+      else if (!haveGame) wait = Date.now() - connectedAt > 6000
+        ? 'Can\'t reach the game. Open "📱 Host remote" on the game screen and scan its code again.'
+        : 'Connecting to the game screen…';
+      $('r-wait').textContent = wait;
+      $('r-wait').classList.toggle('hidden', !wait);
+      const showFj = haveGame && !wait && (!!g.fj || fjForm);
+      $('r-main').classList.toggle('hidden', !haveGame || !!wait || showFj);
+      $('r-fj').classList.toggle('hidden', !showFj);
+      if (!haveGame || wait) return;
+      if (showFj) renderFj(); else renderMain();
+    }
+
+    function renderMain() {
+      const arm = $('r-arm');
+      arm.textContent = g.armed ? 'Lock buzzers' : 'Open buzzers';
+      arm.classList.toggle('open-now', !g.armed);
+      arm.classList.toggle('lock-now', g.armed);
+      const ol = $('r-order'); ol.innerHTML = '';
+      const ords = ['1st', '2nd', '3rd'];
+      g.order.forEach((o, i) => {
+        const li = document.createElement('li'); if (i === 0) li.className = 'first';
+        li.innerHTML = '<span class="pos"></span><span class="name"></span><span class="delta"></span>';
+        li.querySelector('.pos').textContent = ords[i] || `${i + 1}th`;
+        li.querySelector('.name').textContent = o.name;
+        li.querySelector('.delta').textContent = i === 0 ? '' : `+${((o.at - g.order[0].at) / 1000).toFixed(2)}s`;
+        ol.appendChild(li);
+      });
+      $('r-order-empty').classList.toggle('hidden', g.order.length > 0);
+      $('r-order-empty').textContent = g.armed ? 'Buzzers are open. Waiting for someone to buzz…' : 'Buzzers are locked.';
+      const ul = $('r-players'); ul.innerHTML = '';
+      for (const p of g.players) {
+        const li = document.createElement('li'); if (!p.online) li.className = 'offline';
+        li.innerHTML = '<span class="dot"></span><span class="name"></span><button class="x" title="Remove player">×</button>';
+        li.querySelector('.dot').classList.toggle('on', p.online);
+        li.querySelector('.name').textContent = p.name + (p.online ? '' : ' (offline)');
+        li.querySelector('.x').onclick = () => { if (confirm(`Remove ${p.name} from the game?`)) cmd({ cmd: 'kick', id: p.id }); };
+        ul.appendChild(li);
+      }
+      $('r-count').textContent = g.players.length;
+      $('r-players-empty').classList.toggle('hidden', g.players.length > 0);
+      $('r-jeopardy').checked = !!g.jeopardy;
+    }
+
+    function renderFj() {
+      const f = g.fj;
+      const setup = fjForm || !f;
+      $('r-fj-setup').classList.toggle('hidden', !setup);
+      $('r-fj-live').classList.toggle('hidden', setup);
+      if (setup) return;
+      $('r-fj-cat').textContent = f.category;
+      $('r-fj-clue').textContent = f.clue;
+      $('r-fj-clue-note').textContent = f.stage === 'betting' ? '(not shown yet)' : '';
+      $('r-fj-resp').textContent = f.response || '(none entered)';
+      $('r-fj-timer').classList.toggle('hidden', f.stage !== 'clue');
+      $('r-fj-start').classList.toggle('hidden', f.stage !== 'betting');
+      $('r-fj-edit').classList.toggle('hidden', f.stage !== 'betting');
+      $('r-fj-skip').classList.toggle('hidden', f.stage !== 'clue');
+      $('r-fj-music').checked = !!g.music;
+      $('r-fj-music-name').textContent = g.musicName ? `(${g.musicName})` : '';
+      const list = fjPlayers();
+      const done = (id) => (f.stage === 'betting' ? !!f.bets[id] : !!(f.answers[id] || '').trim());
+      const chipsOn = f.stage !== 'reveal';
+      $('r-fj-chips').classList.toggle('hidden', !chipsOn);
+      $('r-fj-reveal').classList.toggle('hidden', chipsOn);
+      if (chipsOn) {
+        $('r-fj-chips-title').textContent = `${f.stage === 'betting' ? 'Bets locked in' : 'Answers in'}: ${list.filter((p) => done(p.id)).length} of ${list.length}`;
+        $('r-fj-chips').innerHTML = '';
+        for (const p of list) { const c = document.createElement('span'); c.className = 'chip' + (done(p.id) ? ' done' : ''); c.textContent = (done(p.id) ? '✓ ' : '… ') + p.name; $('r-fj-chips').appendChild(c); }
+      } else {
+        $('r-fj-chips-title').textContent = 'Reveal (lowest score first)';
+        renderReveal(f);
+      }
+      renderTimer();
+    }
+    // The host sees every answer here; "Show on TV" reveals it to the room.
+    function renderReveal(f) {
+      const ol = $('r-fj-reveal'); ol.innerHTML = '';
+      const list = [...fjPlayers()].sort((a, b) => ((f.bets[a.id] || {}).score ?? -Infinity) - ((f.bets[b.id] || {}).score ?? -Infinity));
+      for (const p of list) {
+        const b = f.bets[p.id], r = f.reveal[p.id] || {}, ans = (f.answers[p.id] || '').trim();
+        const li = document.createElement('li');
+        if (r.correct === true) li.className = 'right'; if (r.correct === false) li.className = 'wrong';
+        li.innerHTML = '<div class="who"><strong></strong><span class="muted"></span></div><div class="ans r-ans"></div><div class="res"></div>';
+        li.querySelector('strong').textContent = p.name;
+        li.querySelector('.who .muted').textContent = b ? `Score ${money(b.score)} · bet ${money(b.bet)}` : 'No bet';
+        const ansEl = li.querySelector('.ans'), res = li.querySelector('.res');
+        ansEl.textContent = ans || '(no answer)';
+        if (!r.shown) ansEl.classList.add('dim');
+        const btn = (label, cls, c) => { const x = document.createElement('button'); x.textContent = label; x.className = cls; x.onclick = () => cmd(c); return x; };
+        if (!r.shown) res.appendChild(btn('Show on TV', '', { cmd: 'fj-reveal', id: p.id }));
+        else if (r.correct === undefined) res.append(btn('✓ Right', 'btn-ok', { cmd: 'fj-judge', id: p.id, correct: true }), ' ', btn('✗ Wrong', 'btn-bad', { cmd: 'fj-judge', id: p.id, correct: false }));
+        else {
+          const bet = b ? b.bet : 0;
+          res.textContent = `${r.correct ? '+' : '−'}${money(bet)}` + (b ? ` → ${money(b.score + (r.correct ? bet : -bet))}` : '') + ' ';
+          res.appendChild(btn('Undo', 'secondary', { cmd: 'fj-judge', id: p.id, correct: null }));
+        }
+        ol.appendChild(li);
+      }
+    }
+    function renderTimer() {
+      if (!g || !g.fj || g.fj.stage !== 'clue') return;
+      $('r-fj-timer').textContent = Math.ceil(Math.max(0, fjEnd - Date.now()) / 1000);
+    }
+    setInterval(renderTimer, 250);
+
+    // ---- buttons
+    $('r-arm').onclick = () => cmd({ cmd: 'arm', on: !g.armed });
+    $('r-new').onclick = () => cmd({ cmd: 'new' });
+    $('r-jeopardy').onchange = () => cmd({ cmd: 'jeopardy', on: $('r-jeopardy').checked });
+    $('r-fj-open').onclick = () => {
+      fjForm = true; $('r-fj-err').classList.add('hidden');
+      const d = store.get('buzzer-remote-fj') || {};
+      $('r-fj-cat-in').value = d.category || ''; $('r-fj-clue-in').value = d.clue || ''; $('r-fj-resp-in').value = d.response || '';
+      render(); $('r-fj-cat-in').focus();
+    };
+    for (const id of ['r-fj-cat-in', 'r-fj-clue-in', 'r-fj-resp-in']) $(id).addEventListener('input', () => {
+      if (!g || !g.fj) store.set('buzzer-remote-fj', { category: $('r-fj-cat-in').value, clue: $('r-fj-clue-in').value, response: $('r-fj-resp-in').value });
+    });
+    $('r-fj-cancel').onclick = () => { fjForm = false; render(); };
+    $('r-fj-setup').onsubmit = (e) => {
+      e.preventDefault();
+      const category = $('r-fj-cat-in').value.trim(), clue = $('r-fj-clue-in').value.trim();
+      if (!category || !clue) { $('r-fj-err').textContent = 'Enter both a category and a clue.'; $('r-fj-err').classList.remove('hidden'); return; }
+      cmd({ cmd: 'fj-setup', category, clue, response: $('r-fj-resp-in').value.trim() });
+      store.del('buzzer-remote-fj');
+      fjForm = false; document.activeElement && document.activeElement.blur(); render();
+    };
+    $('r-fj-edit').onclick = () => {
+      fjForm = true; $('r-fj-err').classList.add('hidden');
+      $('r-fj-cat-in').value = g.fj.category; $('r-fj-clue-in').value = g.fj.clue; $('r-fj-resp-in').value = g.fj.response || '';
+      render();
+    };
+    $('r-fj-start').onclick = () => {
+      const missing = fjPlayers().filter((p) => !g.fj.bets[p.id]).length;
+      if (missing && !confirm(`${missing} player${missing > 1 ? 's haven\'t' : ' hasn\'t'} bet yet. Their bet will count as $0. Reveal the clue anyway?`)) return;
+      cmd({ cmd: 'fj-start' });
+    };
+    $('r-fj-skip').onclick = () => cmd({ cmd: 'fj-skip' });
+    $('r-fj-music').onchange = () => cmd({ cmd: 'fj-music', on: $('r-fj-music').checked });
+    $('r-fj-exit').onclick = () => {
+      if (g.fj && g.fj.stage !== 'reveal' && !confirm('End Final Jeopardy and go back to the buzzer?')) return;
+      cmd({ cmd: 'fj-exit' });
+    };
+
+    // ---- connection (first server that works, like a player's phone)
+    function connect() {
+      const url = BROKERS[brokerIdx % BROKERS.length];
+      const c = mqtt.connect(url, mqttOpts());
+      client = c; lastUp = Date.now(); tvOnline = null;
+      c.on('connect', () => {
+        if (c !== client) return;
+        connectedAt = Date.now(); lastUp = Date.now();
+        c.subscribe([T + '/hs', T + '/host'], { qos: 1 });
+        cmd({ cmd: 'hello' }); render();
+      });
+      c.on('message', (topic, buf) => {
+        if (c !== client) return;
+        if (topic === T + '/host') rc.recv(buf, (msg) => {
+          const was = tvOnline; tvOnline = msg ? !!msg.online : null;
+          if (tvOnline && !was) cmd({ cmd: 'hello' });
+          render();
+        });
+        else if (topic === T + '/hs') hc.recv(buf, (msg) => {
+          if (!msg) { g = null; render(); return; } // cleared (new room or new host key)
+          if (msg.t !== 'hs') return;
+          g = msg;
+          if (g.fj && g.fj.stage === 'clue') fjEnd = Date.now() + (g.fj.remaining || 0);
+          if (g.fj && fjForm && g.fj.stage !== 'betting') fjForm = false;
+          render();
+        });
+      });
+      c.on('offline', render); c.on('close', render); c.on('error', (e) => console.warn('mqtt', url, e && e.message));
+    }
+    setInterval(() => {
+      if (!client) return;
+      if (isConnected()) { lastUp = Date.now(); render(); return; }
+      if (Date.now() - lastUp > 10000 && BROKERS.length > 1) { try { client.end(true); } catch {} brokerIdx++; connect(); }
+      render();
+    }, 2000);
+    setInterval(() => cmd({ cmd: 'hello' }), HEARTBEAT_MS); // lets the game screen know the remote is here
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (client && !client.connected) { try { client.reconnect(); } catch {} } else cmd({ cmd: 'hello' });
+    });
+    keepAwake();
+    document.addEventListener('pointerdown', keepAwake);
+
+    render();
+    rc = await roomCrypto(code); T = rc.topic;
+    hc = await hostCrypto(secret);
+    connect();
   }
 
   // ================================================================= boot
@@ -1187,6 +1636,7 @@
   }
   window.addEventListener('hashchange', () => location.reload()); // a different join link pasted into this tab
   if (params.get('host')) startHost();
+  else if (hashRoom() && hashHost()) startRemote(hashRoom(), hashHost());
   else if (hashRoom() || params.get('room')) startPlayer(hashRoom() || cleanCode(params.get('room')));
   else startHome();
 })();

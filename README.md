@@ -16,6 +16,18 @@ A simple multiplayer game-show buzzer that runs in any web browser. No accounts,
    - **Buzz too early** and your buzzer locks for **¼ second**, like the real show. Each early press restarts the lockout. Players see a grey **WAIT** button while locked and **LOCKED** during the lockout.
    - Turn off **Jeopardy rules** on the host screen for a plain buzzer: new questions open straight away and there's no lockout.
 
+### Host remote (the host's phone)
+
+The page you open with **Host a game** is the **game screen**: put it on the TV or laptop everyone can see, plugged in. The host runs the game from their phone:
+
+1. On the game screen, click **📱 Host remote** and scan the code with **the host's phone**. Don't let players scan it. You can also copy the link and send it only to the host.
+2. The remote controls everything the game screen can: open and lock the buzzers, new question, see the buzz order, remove players, the Jeopardy rules switch, and all of Final Jeopardy. Final Jeopardy is typed privately on the phone and includes a **correct response** that only the host sees. The host also sees players' answers before showing each one on the TV.
+3. While a remote is connected, the game screen hides its controls. **Show controls on this screen** brings them back, and they return by themselves if the remote disconnects.
+
+The remote link has its own secret key, separate from the room code, so players can't read the correct responses or send commands. If someone else might have scanned the remote code, click **New host key** in the same window. The old link stops working.
+
+Browsers keep a page silent until it's been clicked once. If the game screen shows **🔇 Click or tap anywhere…**, click it once so buzzer sounds and music can play.
+
 ### Final Jeopardy
 
 1. On the host screen, click **🏆 Final Jeopardy** and type the category and clue. Do this before the TV is visible: the clue stays blurred while you type.
