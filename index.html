@@ -134,6 +134,47 @@
   .r-ans { font-size: 16px; overflow-wrap: anywhere; }
   .r-ans.dim { color: var(--muted); }
 
+  /* ---------- Board game ---------- */
+  body.game-on #view-host.wrap { max-width: 1400px; padding-top: 12px; }
+  body.game-on .host-head { margin-bottom: 10px; align-items: center; }
+  body.game-on .host-head h2 { display: none; }
+  body.game-on .room-code { font-size: 26px; }
+  body.game-on #host-conn { font-size: 13px; }
+  body.game-on #qr { padding: 4px; }
+  body.game-on #qr svg { width: 64px; height: 64px; }
+  body.game-on #join-url { font-size: 13px; }
+  body.game-on #copy-link { display: none; }
+  .gboard { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; background: #000; padding: 6px; border-radius: 14px; }
+  .gboard .gcat { background: #0b1d94; color: #fff; font-weight: 800; text-transform: uppercase; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 76px; padding: 8px; font-size: clamp(12px, 1.5vw, 20px); overflow-wrap: anywhere; line-height: 1.15; }
+  .gboard .gcell { background: #0b1d94; color: #ffd54a; font-weight: 800; font-size: clamp(18px, 3vw, 44px); display: flex; align-items: center; justify-content: center; min-height: clamp(52px, 10vh, 112px); border: 0; border-radius: 0; padding: 0; text-shadow: 2px 2px 0 #000; }
+  .gboard .gcell:disabled { opacity: 1; cursor: default; }
+  .gboard .gcell.dd-mark::after { content: 'DD'; font-size: 10px; margin-left: 4px; color: #fff; text-shadow: none; vertical-align: top; }
+  .gboard.mini { gap: 3px; padding: 3px; border-radius: 10px; }
+  .gboard.mini .gcat { min-height: 46px; font-size: 9px; padding: 3px; letter-spacing: 0; }
+  .gboard.mini .gcell { min-height: 40px; font-size: 13px; text-shadow: none; }
+  .gclue { background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; min-height: 58vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; }
+  .gc-top { font-size: clamp(16px, 2vw, 26px); opacity: .85; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+  .gc-text { font-family: Georgia, "Times New Roman", serif; font-size: clamp(26px, 4.2vw, 60px); text-transform: uppercase; line-height: 1.25; margin: 20px 0; overflow-wrap: anywhere; }
+  .gc-status { font-size: clamp(22px, 3vw, 40px); font-weight: 800; color: #ffd54a; min-height: 1.3em; }
+  .gc-status.who { font-size: clamp(34px, 5vw, 72px); }
+  .gc-resp { margin-top: 14px; font-size: clamp(18px, 2.2vw, 30px); }
+  .gscores { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 12px; }
+  .gscore { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 16px; text-align: center; min-width: 110px; }
+  .gscore .n { font-weight: 700; overflow-wrap: anywhere; }
+  .gscore .s { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gscore .s.neg { color: var(--accent); }
+  .gscore.ctrl { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+  .gscore.ans { background: color-mix(in srgb, var(--gold) 30%, var(--panel)); }
+  .pclue { width: 100%; max-width: 520px; background: linear-gradient(160deg, #0b1d94, #050d55); color: #fff; border-radius: 14px; padding: 14px 16px; text-align: center; }
+  .pclue .pc-top { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; opacity: .85; font-weight: 700; }
+  .pclue .pc-text { font-family: Georgia, "Times New Roman", serif; font-size: 20px; text-transform: uppercase; margin-top: 6px; overflow-wrap: anywhere; }
+  .buzzer-area.with-clue { gap: 18px; justify-content: flex-start; padding-top: 12px; }
+  .buzzer-area.with-clue #buzzer { width: min(62vw, 38vh, 300px); }
+  #r-g-scores li .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
+  #r-g-scores li .sc.neg { color: var(--accent); }
+  #r-g-scores li button { padding: 4px 10px; font-size: 14px; }
+  .badge { font-size: 12px; font-weight: 700; background: var(--gold); color: #3b2a00; border-radius: 6px; padding: 1px 6px; }
+
   /* ---------- Final Jeopardy ---------- */
   textarea { resize: vertical; line-height: 1.4; }
   .masked { filter: blur(6px); }
@@ -214,9 +255,10 @@
   <div id="player-game">
     <div class="player-top">
       <span class="pill"><span id="conn-dot" class="dot"></span><span id="conn-text">Connecting…</span></span>
-      <span class="pill"><strong id="me-name"></strong>&nbsp;· room <span id="me-room"></span></span>
+      <span class="pill"><strong id="me-name"></strong>&nbsp;<span id="me-room-wrap">· room <span id="me-room"></span></span><span id="me-score" class="hidden"></span></span>
     </div>
     <div class="buzzer-area">
+      <div id="p-clue" class="pclue hidden"><div class="pc-top" id="p-clue-top"></div><div class="pc-text" id="p-clue-text"></div></div>
       <button id="buzzer" disabled>BUZZ</button>
       <div id="status">Connecting…</div>
       <div id="status-sub"></div>
@@ -283,6 +325,12 @@
       <div class="host-actions tv-control">
         <button id="fj-open" class="secondary">🏆 Final Jeopardy</button>
       </div>
+      <div class="host-actions tv-control" style="align-items:center">
+        <select id="gl-select" style="flex:1 1 180px; width:auto"></select>
+        <button id="gl-start" class="secondary">▶ Play this board</button>
+        <button id="gl-file" class="secondary">Open board file…</button>
+        <input type="file" id="gl-file-in" accept=".json,application/json" class="hidden">
+      </div>
     </div>
     <div class="card">
       <h2>Players (<span id="player-count">0</span>)</h2>
@@ -299,6 +347,29 @@
         <button id="new-room" class="secondary">New room</button>
       </div>
     </div>
+  </div>
+
+  <div id="game-tv" class="hidden">
+    <div id="gt-board" class="gboard"></div>
+    <div id="gt-clue" class="gclue hidden">
+      <div class="gc-top" id="gt-c-top"></div>
+      <div class="gc-text" id="gt-c-text"></div>
+      <div class="gc-status" id="gt-c-status"></div>
+      <div class="gc-resp hidden" id="gt-c-resp"></div>
+    </div>
+    <div id="gt-scores" class="gscores"></div>
+    <div class="host-actions tv-control">
+      <button id="gt-open" class="btn-ok">Open buzzers (space)</button>
+      <button id="gt-right" class="btn-ok">✓ Right</button>
+      <button id="gt-wrong" class="btn-bad">✗ Wrong</button>
+      <button id="gt-pass" class="secondary">No one got it</button>
+      <button id="gt-cancel" class="secondary">Put clue back</button>
+      <button id="gt-undo" class="secondary">Undo last ruling</button>
+      <button id="gt-round" class="secondary"></button>
+      <button id="gt-fj" class="secondary">🏆 Final Jeopardy</button>
+      <button id="gt-end" class="secondary">End board game</button>
+    </div>
+    <p class="muted tv-control" style="font-size:14px; margin-top:8px">Click a value to show that clue. Correct responses appear only on the host remote.</p>
   </div>
 
   <div id="fj-host" class="card hidden">
@@ -397,6 +468,38 @@
         <span>Jeopardy rules<br><span class="muted" style="font-size:14px">New questions start locked; buzzing early locks a player out for ¼ second.</span></span></label>
     </div>
     <button id="r-fj-open" class="big secondary">🏆 Final Jeopardy</button>
+    <div class="card stack">
+      <h2>Play a board</h2>
+      <div id="r-boards-none" class="muted">No boards on the game screen yet. Write one in the board editor on that device (✏️ on its home page), or open a board file there.</div>
+      <select id="r-board-select"></select>
+      <button id="r-board-start" class="big">▶ Play this board</button>
+    </div>
+  </div>
+
+  <div id="r-game" class="stack hidden">
+    <div class="card stack hidden" id="r-g-clue">
+      <div class="r-key"><div class="lbl" id="r-g-c-top"></div><div class="val" id="r-g-c-text" style="font-weight:500"></div></div>
+      <div class="r-key"><div class="lbl">Correct response</div><div class="val resp" id="r-g-c-resp"></div></div>
+      <div id="r-g-c-status" class="fj-msg"></div>
+      <button id="r-g-open" class="big open-now">Open buzzers</button>
+      <div class="row" id="r-g-judge"><button id="r-g-right" class="big btn-ok" style="flex:1"></button><button id="r-g-wrong" class="big btn-bad" style="flex:1"></button></div>
+      <button id="r-g-pass" class="secondary">No one got it · show the response</button>
+      <button id="r-g-back" class="big secondary">Back to the board</button>
+      <button id="r-g-cancel" class="linklike">Put this clue back on the board</button>
+    </div>
+    <div class="card stack" id="r-g-boardwrap">
+      <div class="row" style="justify-content:space-between"><h2 id="r-g-title" style="margin:0"></h2><span class="muted" id="r-g-roundlbl"></span></div>
+      <div id="r-g-board" class="gboard mini"></div>
+      <div class="muted" id="r-g-hint" style="font-size:14px"></div>
+    </div>
+    <div class="card">
+      <h2>Scores</h2>
+      <ul id="r-g-scores" class="players"></ul>
+      <div class="host-actions"><button id="r-g-undo" class="secondary">Undo last ruling</button></div>
+    </div>
+    <button id="r-g-round" class="big secondary"></button>
+    <button id="r-g-fj" class="big secondary">🏆 Final Jeopardy</button>
+    <button id="r-g-end" class="big secondary">End board game</button>
   </div>
 
   <div id="r-fj" class="stack hidden">
@@ -621,6 +724,26 @@
     return () => { try { out.gain.setTargetAtTime(0.0001, a.currentTime, 0.05); setTimeout(() => out.disconnect(), 600); } catch {} };
   }
   const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toLocaleString();
+  // Boards are written in editor.html and saved in this browser under this key.
+  const BOARDS_KEY = 'buzzer-boards-v1', BOARD_CATS = 6, BOARD_ROWS = 5;
+  function normalizeBoard(b) {
+    if (!b || typeof b !== 'object' || !Array.isArray(b.rounds)) throw new Error('This isn\'t a board file.');
+    const S = (v, m) => String(v == null ? '' : v).slice(0, m);
+    const DEF = [[200, 400, 600, 800, 1000], [400, 800, 1200, 1600, 2000]];
+    const f = b.final || {};
+    return {
+      id: S(b.id, 40) || uid(), title: S(b.title, 80) || 'Untitled board',
+      rounds: [0, 1].map((r) => ({ categories: Array.from({ length: BOARD_CATS }, (_, c) => {
+        const src = ((b.rounds[r] || {}).categories || [])[c] || {};
+        return { name: S(src.name, 80), clues: Array.from({ length: BOARD_ROWS }, (_, i) => {
+          const q = (src.clues || [])[i] || {}, v = Number(q.value);
+          return { value: q.value !== '' && q.value != null && Number.isFinite(v) ? Math.max(0, Math.round(v)) : DEF[r][i], clue: S(q.clue, 400), response: S(q.response, 160), dailyDouble: !!q.dailyDouble };
+        }) };
+      }) })),
+      final: { category: S(f.category, 80), clue: S(f.clue, 400), response: S(f.response, 160) },
+    };
+  }
+  const roundHasClues = (board, r) => board.rounds[r].categories.some((c) => c.clues.some((q) => q.clue.trim()));
   const FJ_MS = 32000, FJ_GRACE_MS = 1500;
 
   const soundById = (id) => SOUNDS.find((s) => s.id === id) || SOUNDS[0];
@@ -801,6 +924,34 @@
       if (hostOnline === false) { setPill(false, 'Host offline'); st.textContent = 'Host\'s screen is offline'; sub.textContent = 'Waiting for it to come back…'; return; }
       if (!joined()) { setPill(true, 'Connected'); st.textContent = 'Joining…'; sub.textContent = ''; return; }
       setPill(true, 'Connected');
+      // Board game: score, the current clue, and whose turn it is.
+      const game = state.game, cl = game && game.clue;
+      $('me-score').classList.toggle('hidden', !game); $('me-room-wrap').classList.toggle('hidden', !!game);
+      if (game) $('me-score').textContent = '· ' + money(game.scores[me.clientId] || 0);
+      $('p-clue').classList.toggle('hidden', !cl);
+      document.querySelector('#view-player .buzzer-area').classList.toggle('with-clue', !!cl);
+      if (cl) { $('p-clue-top').textContent = `${cl.category} · ${money(cl.value)}`; $('p-clue-text').textContent = cl.text; }
+      if (game) {
+        const nm = (id) => (game.names && game.names[id]) || 'Someone';
+        if (!cl || cl.stage === 'done') {
+          const r = cl && cl.result;
+          if (r) {
+            st.textContent = r.pass ? 'No one got it' : r.correct ? `${r.id === me.clientId ? 'You' : nm(r.id)} got it! ${money(r.delta)}` : `No one got it`;
+            sub.textContent = cl.response ? `Correct response: ${cl.response}` : '';
+          } else {
+            st.textContent = 'Look at the board';
+            sub.textContent = game.control === me.clientId ? 'You pick the next clue!' : game.control ? `${nm(game.control)} picks the next clue` : 'The host picks the next clue';
+          }
+          return;
+        }
+        if ((cl.tried || []).includes(me.clientId)) { st.textContent = 'You\'ve had your turn on this clue'; sub.textContent = ''; return; }
+        if (cl.answerer) {
+          btn.classList.toggle('mine', cl.answerer === me.clientId);
+          st.textContent = cl.answerer === me.clientId ? 'You buzzed first! Answer now 🎤' : `${nm(cl.answerer)} is answering`;
+          sub.textContent = ''; return;
+        }
+        if (cl.lastWrong && state.armed) { st.textContent = 'Ready!'; sub.textContent = `${nm(cl.lastWrong.id)} missed it. Buzz in if you know it!`; setBtn(lockedOut() ? 'lockout' : 'ready'); return; }
+      } else { $('p-clue').classList.add('hidden'); }
       if (pos >= 0 || pendingBuzz) {
         const p = pos >= 0 ? pos : order.length;
         st.textContent = p === 0 ? 'You buzzed first! 🎉' : `You buzzed #${p + 1}`;
@@ -993,7 +1144,210 @@
       if (up) { el.textContent = '● Room is open. Keep this screen on.'; el.style.color = 'var(--ok)'; }
       else { el.textContent = 'Connecting… (check this device\'s internet)'; el.style.color = ''; }
     }
-    const renderAll = () => { renderOrder(); renderPlayers(); renderFj(); };
+    const renderAll = () => { renderOrder(); renderPlayers(); renderFj(); renderGame(); };
+
+    // ---- Board game: board → clue → buzz → judge → scores
+    // hs.game = { boardId, title, board, round: 0|1, used: {key: true}, scores: {id: n}, control: id,
+    //             clue: null | { key: 'r-c-i', stage: 'live'|'done', tried: [ids], lastWrong, result, doneAt } }
+    const RESULT_MS = 4000;
+    let gameSnaps = hs.gameSnaps || []; // for "Undo last ruling"
+    const keyOf = (r, c, i) => `${r}-${c}-${i}`;
+    const clueAt = (key) => { const [r, c, i] = key.split('-').map(Number); const cat = hs.game.board.rounds[r].categories[c]; return { r, c, i, cat, q: cat.clues[i] }; };
+    const pname = (id) => (hs.players[id] && hs.players[id].name) || 'Someone';
+    function answerer() {
+      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done') return null;
+      const o = hs.order.find((x) => !cl.tried.includes(x.id)); return o ? o.id : null;
+    }
+    const controlsHere = () => !remoteOn() || document.body.classList.contains('controls-forced');
+    function savedBoards() { try { const db = JSON.parse(localStorage.getItem(BOARDS_KEY)); if (db && db.boards) return db; } catch {} return { current: null, boards: {} }; }
+    function boardList() {
+      const out = [];
+      for (const b of Object.values(savedBoards().boards)) {
+        try { const n = normalizeBoard(b); out.push({ id: n.id, title: n.title, filled: n.rounds.flatMap((r) => r.categories.flatMap((c) => c.clues)).filter((q) => q.clue.trim()).length }); } catch {}
+      }
+      return out.sort((a, b) => a.title.localeCompare(b.title));
+    }
+    function renderBoardPicker() {
+      const sel = $('gl-select'), list = boardList(), cur = savedBoards().current;
+      sel.innerHTML = '';
+      if (!list.length) sel.add(new Option('No boards yet: write one with ✏️ on the home page', ''));
+      for (const b of list) sel.add(new Option(`${b.title} (${b.filled} clues)`, b.id, false, b.id === cur));
+      $('gl-start').disabled = !list.length;
+    }
+    function gameSnapshot() {
+      const { board, ...rest } = hs.game;
+      gameSnaps.push(JSON.stringify({ game: rest, order: hs.order, armed: hs.armed }));
+      if (gameSnaps.length > 30) gameSnaps.shift();
+      hs.gameSnaps = gameSnaps;
+    }
+    function gameLoad(boardId) {
+      const raw = savedBoards().boards[boardId]; if (!raw || hs.fj) return false;
+      let board; try { board = normalizeBoard(raw); } catch { return false; }
+      hs.game = { boardId, title: board.title, board, round: roundHasClues(board, 0) || !roundHasClues(board, 1) ? 0 : 1, used: {}, scores: {}, control: null, clue: null };
+      for (const id of Object.keys(hs.players)) hs.game.scores[id] = 0;
+      gameSnaps = []; hs.gameSnaps = gameSnaps;
+      hs.order = []; hs.armed = false; hs.round++; changed();
+      return true;
+    }
+    function gameEnd() { hs.game = null; gameSnaps = []; delete hs.gameSnaps; reset(); }
+    function gamePick(key) {
+      const g = hs.game; if (!g || hs.fj || typeof key !== 'string') return;
+      if (g.clue && g.clue.stage !== 'done') return; // finish (or put back) the current clue first
+      let at; try { at = clueAt(key); } catch { return; }
+      if (at.r !== g.round || !at.q || !at.q.clue.trim() || g.used[key]) return;
+      g.clue = { key, stage: 'live', tried: [], lastWrong: null, result: null };
+      // With Jeopardy rules the buzzers stay locked while the host reads.
+      hs.order = []; hs.round++; hs.armed = !hs.jeopardy; changed();
+    }
+    function gameOpen() {
+      const cl = hs.game && hs.game.clue;
+      if (!cl || cl.stage === 'done' || hs.armed || answerer()) return;
+      hs.armed = true; changed();
+    }
+    function judgeSound(kind) {
+      if (!$('host-sound').checked) return;
+      try {
+        if (kind === 'right') { tone(784, 0, .12, 'sine', .3); tone(1175, .12, .35, 'sine', .3); }
+        else if (kind === 'wrong') tone(150, 0, .45, 'sawtooth', .22);
+        else { tone(392, 0, .25, 'triangle', .3); tone(294, .25, .45, 'triangle', .3); }
+      } catch {}
+    }
+    function gameJudge(correct) {
+      const g = hs.game, cl = g && g.clue, id = answerer(); if (!cl || !id) return;
+      gameSnapshot();
+      const v = clueAt(cl.key).q.value;
+      g.scores[id] = (g.scores[id] || 0) + (correct ? v : -v);
+      if (correct) { g.control = id; judgeSound('right'); gameFinish({ id, correct: true, delta: v }); return; }
+      judgeSound('wrong');
+      cl.tried.push(id); cl.lastWrong = { id, delta: -v };
+      if (!Object.keys(hs.players).some((p) => !cl.tried.includes(p))) { gameFinish({ id, correct: false, delta: -v }); return; }
+      hs.order = []; hs.round++; hs.armed = true; changed(); // rebound: everyone else can buzz straight away
+    }
+    function gamePass() {
+      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done') return;
+      gameSnapshot(); judgeSound('pass'); gameFinish({ pass: true });
+    }
+    function gameFinish(result) {
+      const g = hs.game, cl = g.clue, key = cl.key;
+      g.used[key] = true; cl.stage = 'done'; cl.result = result; cl.doneAt = Date.now();
+      hs.order = []; hs.round++; hs.armed = false; changed();
+      // Show the result and correct response for a moment, then back to the board.
+      setTimeout(() => { if (hs.game && hs.game.clue && hs.game.clue.key === key && hs.game.clue.stage === 'done') { hs.game.clue = null; changed(); } }, RESULT_MS);
+    }
+    function gameBack() { const cl = hs.game && hs.game.clue; if (cl && cl.stage === 'done') { hs.game.clue = null; changed(); } }
+    function gameCancel() {
+      const cl = hs.game && hs.game.clue; if (!cl || cl.stage === 'done' || cl.tried.length) return; // after a ruling, use Undo
+      hs.game.clue = null; hs.order = []; hs.round++; hs.armed = false; changed();
+    }
+    function gameUndo() {
+      const snap = gameSnaps.pop(); if (!snap || !hs.game) return;
+      const o = JSON.parse(snap);
+      hs.game = { ...o.game, board: hs.game.board }; hs.order = o.order; hs.armed = o.armed; hs.round++;
+      hs.gameSnaps = gameSnaps; changed();
+    }
+    function gameScore(id, score) {
+      const g = hs.game; score = Math.round(Number(score));
+      if (!g || !hs.players[id] || !Number.isFinite(score)) return;
+      gameSnapshot(); g.scores[id] = score; changed();
+    }
+    function gameControl(id) { if (hs.game && hs.players[id]) { hs.game.control = id; changed(); } }
+    function gameRound(r) {
+      const g = hs.game; if (!g || (r !== 0 && r !== 1) || r === g.round || (g.clue && g.clue.stage !== 'done')) return;
+      g.round = r; g.clue = null;
+      if (r === 1) { // like the show: the lowest score picks first in round 2
+        const ids = Object.keys(hs.players).sort((a, b) => (g.scores[a] || 0) - (g.scores[b] || 0));
+        if (ids.length) g.control = ids[0];
+      }
+      changed();
+    }
+    function gamePublic() {
+      const g = hs.game; if (!g) return null;
+      const names = {}; for (const p of Object.values(hs.players)) names[p.id] = p.name;
+      const out = { title: g.title, round: g.round, scores: g.scores, control: g.control, names, clue: null };
+      const cl = g.clue;
+      if (cl) {
+        const { cat, q } = clueAt(cl.key);
+        out.clue = { key: cl.key, category: cat.name, value: q.value, text: q.clue, stage: cl.stage, tried: cl.tried, answerer: answerer(),
+          lastWrong: cl.lastWrong, result: cl.result, response: cl.stage === 'done' ? q.response : '' }; // the response only after the clue is over
+      }
+      return out;
+    }
+    function renderGame() {
+      const g = hs.game;
+      document.body.classList.toggle('game-on', !!g);
+      if (!g || hs.fj || fjEditing) return;
+      const cl = g.clue, round = g.board.rounds[g.round], ans = answerer();
+      // Board
+      const bd = $('gt-board'); bd.innerHTML = ''; bd.classList.toggle('hidden', !!cl);
+      for (const cat of round.categories) { const d = document.createElement('div'); d.className = 'gcat'; d.textContent = cat.name; bd.appendChild(d); }
+      for (let i = 0; i < BOARD_ROWS; i++) round.categories.forEach((cat, c) => {
+        const q = cat.clues[i], key = keyOf(g.round, c, i), live = !!q.clue.trim() && !g.used[key];
+        const b = document.createElement('button'); b.className = 'gcell';
+        b.textContent = live ? money(q.value) : ''; b.disabled = !live;
+        b.onclick = () => { if (controlsHere()) gamePick(key); };
+        bd.appendChild(b);
+      });
+      // Clue
+      $('gt-clue').classList.toggle('hidden', !cl);
+      if (cl) {
+        const { cat, q } = clueAt(cl.key), stEl = $('gt-c-status'), r = cl.result;
+        $('gt-c-top').textContent = `${cat.name} · ${money(q.value)}`;
+        $('gt-c-text').textContent = q.clue;
+        stEl.classList.toggle('who', !!ans);
+        if (cl.stage === 'done') stEl.textContent = r.pass ? 'No one got it' : r.correct ? `✓ ${pname(r.id)} ${money(r.delta)}` : `✗ ${pname(r.id)} ${money(r.delta)}`;
+        else if (ans) stEl.textContent = pname(ans);
+        else if (hs.armed) stEl.textContent = cl.lastWrong ? `✗ ${pname(cl.lastWrong.id)} ${money(cl.lastWrong.delta)}. Anyone else?` : 'Buzz in!';
+        else stEl.textContent = '';
+        $('gt-c-resp').classList.toggle('hidden', cl.stage !== 'done' || !q.response);
+        $('gt-c-resp').textContent = cl.stage === 'done' && q.response ? `Correct response: ${q.response}` : ''; // never in the page before the clue is over
+      }
+      // Scores
+      const sc = $('gt-scores'); sc.innerHTML = '';
+      for (const p of Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt)) {
+        const v = g.scores[p.id] || 0, d = document.createElement('div');
+        d.className = 'gscore' + (g.control === p.id ? ' ctrl' : '') + (ans === p.id ? ' ans' : '');
+        d.innerHTML = '<div class="n"></div><div class="s"></div>';
+        d.querySelector('.n').textContent = p.name; d.querySelector('.s').textContent = money(v);
+        d.querySelector('.s').classList.toggle('neg', v < 0);
+        sc.appendChild(d);
+      }
+      // TV controls (used only when there's no host remote)
+      const live = cl && cl.stage !== 'done';
+      $('gt-open').classList.toggle('hidden', !live || hs.armed || !!ans);
+      $('gt-right').classList.toggle('hidden', !ans); $('gt-wrong').classList.toggle('hidden', !ans);
+      if (ans) { const v = clueAt(cl.key).q.value; $('gt-right').textContent = `✓ Right +${money(v)}`; $('gt-wrong').textContent = `✗ Wrong −${money(v)}`; }
+      $('gt-pass').classList.toggle('hidden', !live);
+      $('gt-cancel').classList.toggle('hidden', !live || cl.tried.length > 0);
+      $('gt-undo').disabled = !gameSnaps.length;
+      const other = g.round === 0 ? 1 : 0;
+      $('gt-round').textContent = g.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
+      $('gt-round').classList.toggle('hidden', !!live || !roundHasClues(g.board, other));
+    }
+    $('gt-open').onclick = gameOpen;
+    $('gt-right').onclick = () => gameJudge(true);
+    $('gt-wrong').onclick = () => gameJudge(false);
+    $('gt-pass').onclick = gamePass;
+    $('gt-cancel').onclick = gameCancel;
+    $('gt-undo').onclick = gameUndo;
+    $('gt-round').onclick = () => hs.game && gameRound(hs.game.round === 0 ? 1 : 0);
+    $('gt-end').onclick = () => { if (confirm('End this board game? Scores will be cleared.')) gameEnd(); };
+    $('gt-fj').onclick = () => $('fj-open').onclick();
+    $('gl-start').onclick = () => { const id = $('gl-select').value; if (id) gameLoad(id); };
+    $('gl-file').onclick = () => $('gl-file-in').click();
+    $('gl-file-in').onchange = async () => {
+      const f = $('gl-file-in').files[0]; $('gl-file-in').value = '';
+      if (!f) return;
+      try {
+        const b = normalizeBoard(JSON.parse(await f.text()));
+        const db = savedBoards();
+        if (db.boards[b.id]) b.id = uid();
+        db.boards[b.id] = { format: 'gamebuzzer-board', version: 1, updated: Date.now(), ...b }; db.current = b.id;
+        localStorage.setItem(BOARDS_KEY, JSON.stringify(db));
+        renderBoardPicker(); publishHostState(true);
+      } catch (e) { alert('Couldn\'t open that file. ' + (e.message || '')); }
+    };
+    // Boards edited in another tab (the board editor) show up here straight away.
+    window.addEventListener('storage', (e) => { if (e.key === BOARDS_KEY) { renderBoardPicker(); publishHostState(true); } });
 
     // ---- Final Jeopardy (host side)
     // hs.fj = { id, stage: 'betting' | 'clue' | 'reveal', category, clue, endsAt,
@@ -1018,7 +1372,8 @@
     const fjPlayers = () => Object.values(hs.players).sort((a, b) => a.joinedAt - b.joinedAt);
     function renderFj() {
       const f = hs.fj, on = !!f || fjEditing;
-      $('host-main').classList.toggle('hidden', on);
+      $('host-main').classList.toggle('hidden', on || !!hs.game);
+      $('game-tv').classList.toggle('hidden', on || !hs.game);
       $('fj-host').classList.toggle('hidden', !on);
       if (!on) return;
       const editing = fjEditing || !f;
@@ -1185,7 +1540,8 @@
     }
 
     function fjFillSetup() {
-      const src = hs.fj || hs.fjDraft || {};
+      const bf = hs.game && hs.game.board.final;
+      const src = hs.fj || (bf && (bf.category || bf.clue) ? bf : hs.fjDraft) || {};
       $('fj-cat-in').value = src.category || ''; $('fj-clue-in').value = src.clue || ''; $('fj-resp-in').value = src.response || '';
       $('fj-show-clue').checked = false; $('fj-clue-in').classList.add('masked'); $('fj-resp-in').classList.add('masked');
       $('fj-setup-err').classList.add('hidden');
@@ -1211,7 +1567,7 @@
     };
 
     const stateMsg = () => ({
-      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy, fj: fjPublic(),
+      t: 'state', hostId: hs.hostId, round: hs.round, armed: hs.armed, jeopardy: hs.jeopardy, fj: fjPublic(), game: gamePublic(),
       order: hs.order.map((o) => ({ id: o.id, name: (hs.players[o.id] || o).name })),
       players: Object.keys(hs.players),
     });
@@ -1233,6 +1589,7 @@
         players: fjPlayers().map((p) => ({ id: p.id, name: p.name, online: isOnline(p.id) })),
         fj: f ? { ...f, remaining: f.stage === 'clue' ? Math.max(0, f.endsAt - Date.now()) : 0 } : null,
         music: $('fj-music').checked, musicName: musicFile ? musicFile.name : '',
+        game: hs.game ? { ...hs.game, answerer: answerer() } : null, canUndo: gameSnaps.length > 0, boards: boardList(),
       };
     }
     function publishHostState(force) {
@@ -1251,8 +1608,19 @@
       const id = typeof c.id === 'string' ? c.id.slice(0, 40) : '';
       switch (c.cmd) {
         case 'hello': publishHostState(true); break;
-        case 'arm': if (!hs.fj) { hs.armed = !!c.on; changed(); } break;
-        case 'new': if (!hs.fj) reset(); break;
+        case 'arm': if (hs.game) { if (c.on) gameOpen(); } else if (!hs.fj) { hs.armed = !!c.on; changed(); } break;
+        case 'new': if (!hs.fj && !hs.game) reset(); break;
+        case 'game-load': gameLoad(String(c.boardId || '')); break;
+        case 'game-end': if (hs.game) gameEnd(); break;
+        case 'game-pick': gamePick(c.key); break;
+        case 'game-judge': gameJudge(!!c.correct); break;
+        case 'game-pass': gamePass(); break;
+        case 'game-back': gameBack(); break;
+        case 'game-cancel': gameCancel(); break;
+        case 'game-undo': gameUndo(); break;
+        case 'game-score': gameScore(id, c.score); break;
+        case 'game-control': gameControl(id); break;
+        case 'game-round': gameRound(Number(c.round)); break;
         case 'jeopardy': hs.jeopardy = !!c.on; changed(); break;
         case 'kick': if (hs.players[id]) kick(id); break;
         case 'fj-setup': fjSetup(c.category, c.clue, c.response); break;
@@ -1309,12 +1677,16 @@
       if (msg.t === 'join') {
         const prev = hs.players[id];
         hs.players[id] = { id, name: String(msg.name || 'Player').slice(0, 24), sound: soundById(msg.sound).id, joinedAt: prev ? prev.joinedAt : Date.now() };
+        if (hs.game && hs.game.scores[id] === undefined) hs.game.scores[id] = 0;
         changed();
       } else if (msg.t === 'buzz') {
         const p = hs.players[id];
         // Ignore buzzes from before the last reset, while locked, or repeats.
-        if (!p || !hs.armed || msg.round !== hs.round || hs.order.some((o) => o.id === id)) { broadcast(); return; }
+        const gcl = hs.game && hs.game.clue;
+        if (!p || !hs.armed || msg.round !== hs.round || hs.order.some((o) => o.id === id)
+          || (hs.game && (!gcl || gcl.stage === 'done' || gcl.tried.includes(id)))) { broadcast(); return; }
         hs.order.push({ id, name: p.name, at });
+        if (gcl) hs.armed = false; // board game: the first buzz gets to answer
         if ($('host-sound').checked) playSound(p.sound);
         changed();
         const li = $('order').lastElementChild; if (li) li.classList.add('flash');
@@ -1383,6 +1755,7 @@
     document.addEventListener('keydown', (e) => {
       if ((e.target.tagName === 'INPUT' && e.target.type !== 'checkbox') || e.target.tagName === 'TEXTAREA' || e.repeat) return;
       if (hs.fj || fjEditing) return; // buzzer shortcuts are off during Final Jeopardy
+      if (hs.game) { if (e.code === 'Space') { e.preventDefault(); gameOpen(); } return; }
       if (e.code === 'Space') { e.preventDefault(); toggleLock(); }
       if (e.key === 'n' || e.key === 'N') reset();
     });
@@ -1399,6 +1772,8 @@
     });
     setInterval(() => { renderPlayers(); renderRemote(); publishHostState(); }, 5000);
 
+    if (hs.game && hs.game.clue && hs.game.clue.stage === 'done') hs.game.clue = null;
+    renderBoardPicker();
     renderHead(); renderAll(); renderConn(); renderRemote();
     rc = await roomCrypto(hs.code); T = rc.topic;
     hc = await hostCrypto(hs.hostSecret); save();
@@ -1438,11 +1813,95 @@
       $('r-wait').textContent = wait;
       $('r-wait').classList.toggle('hidden', !wait);
       const showFj = haveGame && !wait && (!!g.fj || fjForm);
-      $('r-main').classList.toggle('hidden', !haveGame || !!wait || showFj);
+      const showGame = haveGame && !wait && !showFj && !!g.game;
+      $('r-main').classList.toggle('hidden', !haveGame || !!wait || showFj || showGame);
       $('r-fj').classList.toggle('hidden', !showFj);
+      $('r-game').classList.toggle('hidden', !showGame);
       if (!haveGame || wait) return;
-      if (showFj) renderFj(); else renderMain();
+      if (showFj) renderFj(); else if (showGame) renderGame(); else renderMain();
     }
+
+    // ---- board game on the remote
+    function renderGame() {
+      const G = g.game, cl = G.clue, round = G.board.rounds[G.round], ans = G.answerer;
+      const nm = (id) => (g.players.find((p) => p.id === id) || {}).name || 'Someone';
+      const live = cl && cl.stage !== 'done';
+      $('r-g-title').textContent = G.board.title;
+      $('r-g-roundlbl').textContent = `Round ${G.round + 1}`;
+      // Clue panel
+      $('r-g-clue').classList.toggle('hidden', !cl);
+      $('r-g-boardwrap').classList.toggle('hidden', !!live);
+      if (cl) {
+        const [r, c, i] = cl.key.split('-').map(Number), cat = G.board.rounds[r].categories[c], q = cat.clues[i];
+        $('r-g-c-top').textContent = `${cat.name} · ${money(q.value)}` + (q.dailyDouble ? ' · Daily Double (plays as a normal clue for now)' : '');
+        $('r-g-c-text').textContent = q.clue;
+        $('r-g-c-resp').textContent = q.response || '(none written)';
+        const res = cl.result;
+        let status = '';
+        if (!live) status = res.pass ? 'No one got it' : res.correct ? `✓ ${nm(res.id)} ${money(res.delta)}` : `✗ ${nm(res.id)} ${money(res.delta)}. No one else left`;
+        else if (ans) status = `${nm(ans)} buzzed in`;
+        else if (g.armed) status = cl.lastWrong ? `✗ ${nm(cl.lastWrong.id)} ${money(cl.lastWrong.delta)}. Buzzers open for everyone else…` : 'Buzzers open. Waiting for a buzz…';
+        else status = 'Read the clue, then open the buzzers.';
+        $('r-g-c-status').textContent = status;
+        $('r-g-open').classList.toggle('hidden', !live || g.armed || !!ans);
+        $('r-g-judge').classList.toggle('hidden', !ans);
+        $('r-g-right').textContent = `✓ Right +${money(q.value)}`; $('r-g-wrong').textContent = `✗ Wrong −${money(q.value)}`;
+        $('r-g-pass').classList.toggle('hidden', !live);
+        $('r-g-back').classList.toggle('hidden', !!live);
+        $('r-g-cancel').classList.toggle('hidden', !live || cl.tried.length > 0);
+      }
+      // Miniature board: tap a value to show that clue
+      const bd = $('r-g-board'); bd.innerHTML = '';
+      for (const cat of round.categories) { const d = document.createElement('div'); d.className = 'gcat'; d.textContent = cat.name; bd.appendChild(d); }
+      for (let i = 0; i < 5; i++) round.categories.forEach((cat, c) => {
+        const q = cat.clues[i], key = `${G.round}-${c}-${i}`, open = !!q.clue.trim() && !G.used[key];
+        const b = document.createElement('button'); b.className = 'gcell' + (open && q.dailyDouble ? ' dd-mark' : '');
+        b.textContent = open ? money(q.value) : ''; b.disabled = !open || !!live;
+        b.onclick = () => cmd({ cmd: 'game-pick', key });
+        bd.appendChild(b);
+      });
+      const left = round.categories.flatMap((cat, c) => cat.clues.map((q, i) => (q.clue.trim() && !G.used[`${G.round}-${c}-${i}`] ? 1 : 0))).reduce((a, b) => a + b, 0);
+      $('r-g-hint').textContent = !left ? 'Every clue in this round has been played.'
+        : G.control ? `${nm(G.control)} picks next. Tap the value they choose.` : 'Tap the value the first player chooses.';
+      // Scores
+      const ul = $('r-g-scores'); ul.innerHTML = '';
+      for (const p of g.players) {
+        const v = G.scores[p.id] || 0, li = document.createElement('li');
+        li.innerHTML = '<span class="dot"></span><span class="name"></span><span class="sc"></span><button class="secondary" data-a="ctrl">Picks</button><button class="secondary" data-a="edit">Edit</button>';
+        li.querySelector('.dot').classList.toggle('on', p.online);
+        li.querySelector('.name').textContent = p.name;
+        if (G.control === p.id) { const b = document.createElement('span'); b.className = 'badge'; b.textContent = 'picks next'; li.querySelector('.name').append(' ', b); }
+        li.querySelector('.sc').textContent = money(v); li.querySelector('.sc').classList.toggle('neg', v < 0);
+        li.querySelector('[data-a=ctrl]').classList.toggle('hidden', G.control === p.id);
+        li.querySelector('[data-a=ctrl]').onclick = () => cmd({ cmd: 'game-control', id: p.id });
+        li.querySelector('[data-a=edit]').onclick = () => {
+          const v2 = prompt(`New score for ${p.name}:`, String(v));
+          if (v2 === null) return;
+          const n = Math.round(Number(String(v2).replace(/[$,\s]/g, '').replace('−', '-')));
+          if (Number.isFinite(n)) cmd({ cmd: 'game-score', id: p.id, score: n }); else alert('That isn\'t a number.');
+        };
+        ul.appendChild(li);
+      }
+      $('r-g-undo').disabled = !g.canUndo;
+      const other = G.round === 0 ? 1 : 0;
+      $('r-g-round').textContent = G.round === 0 ? 'Go to Round 2 →' : '← Back to Round 1';
+      $('r-g-round').classList.toggle('hidden', !!live || !roundHasClues(G.board, other));
+    }
+    $('r-g-open').onclick = () => cmd({ cmd: 'arm', on: true });
+    $('r-g-right').onclick = () => cmd({ cmd: 'game-judge', correct: true });
+    $('r-g-wrong').onclick = () => cmd({ cmd: 'game-judge', correct: false });
+    $('r-g-pass').onclick = () => cmd({ cmd: 'game-pass' });
+    $('r-g-back').onclick = () => cmd({ cmd: 'game-back' });
+    $('r-g-cancel').onclick = () => cmd({ cmd: 'game-cancel' });
+    $('r-g-undo').onclick = () => cmd({ cmd: 'game-undo' });
+    $('r-g-round').onclick = () => {
+      const to = g.game.round === 0 ? 1 : 0;
+      if (to === 1 && !confirm('Go to Round 2? Values double, and the lowest score picks first.')) return;
+      cmd({ cmd: 'game-round', round: to });
+    };
+    $('r-g-end').onclick = () => { if (confirm('End this board game? Scores will be cleared.')) cmd({ cmd: 'game-end' }); };
+    $('r-g-fj').onclick = () => $('r-fj-open').onclick();
+    $('r-board-start').onclick = () => { const id = $('r-board-select').value; if (id) cmd({ cmd: 'game-load', boardId: id }); };
 
     function renderMain() {
       const arm = $('r-arm');
@@ -1473,6 +1932,11 @@
       $('r-count').textContent = g.players.length;
       $('r-players-empty').classList.toggle('hidden', g.players.length > 0);
       $('r-jeopardy').checked = !!g.jeopardy;
+      const boards = g.boards || [], sel = $('r-board-select'), keep = sel.value;
+      $('r-boards-none').classList.toggle('hidden', boards.length > 0);
+      sel.classList.toggle('hidden', !boards.length); $('r-board-start').classList.toggle('hidden', !boards.length);
+      sel.innerHTML = '';
+      for (const b of boards) sel.add(new Option(`${b.title} (${b.filled} clues)`, b.id, false, b.id === keep));
     }
 
     function renderFj() {
@@ -1543,7 +2007,8 @@
     $('r-jeopardy').onchange = () => cmd({ cmd: 'jeopardy', on: $('r-jeopardy').checked });
     $('r-fj-open').onclick = () => {
       fjForm = true; $('r-fj-err').classList.add('hidden');
-      const d = store.get('buzzer-remote-fj') || {};
+      const bf = g && g.game && g.game.board.final;
+      const d = (bf && (bf.category || bf.clue) ? bf : store.get('buzzer-remote-fj')) || {};
       $('r-fj-cat-in').value = d.category || ''; $('r-fj-clue-in').value = d.clue || ''; $('r-fj-resp-in').value = d.response || '';
       render(); $('r-fj-cat-in').focus();
     };

@@ -50,7 +50,21 @@ Open **✏️ Write question boards** from the home page. A board has **Round 1*
 - **From a spreadsheet:** click **Download spreadsheet template** and open it in Google Sheets (*File → Import → Upload*) or Excel. Fill in one row per clue: `Round` (1, 2 or Final), `Category`, `Value`, `Clue`, `Response`, `Daily Double` (yes or blank). Blank Round or Category cells repeat the row above. Copy the rows, including the header, and use **Paste from spreadsheet…**. Problems are listed by row number. **Download as spreadsheet** turns any board back into a spreadsheet for editing.
 - **Saving:** boards save in your browser as you type, and you can keep several. **Save board file** downloads a board to back it up or share it, and **Open board file…** loads one.
 
-Boards aren't playable yet. That's the next step: a game-screen view for the TV and a host remote for the phone.
+### Playing a board
+
+1. Write a board in the editor on the device that runs the game screen, or move it there with a board file. **Open board file…** on the game screen also works.
+2. Connect the host remote, let players join, then choose the board under **Play a board** on the remote and tap **▶ Play this board**. The TV shows the board and everyone's score.
+3. The player in control calls out a category and value, and the host taps it on the remote's mini board. The clue fills the TV and appears on every phone. Buzzers stay locked while the host reads, with the ¼-second early-buzz rule.
+4. Tap **Open buzzers**. The first player to buzz answers and everyone else is locked out. The remote shows the correct response:
+   - **✓ Right:** the value is added, that player picks next, and the TV shows the correct response for a few seconds before returning to the board.
+   - **✗ Wrong:** the value is subtracted, that player is out for this clue, and the buzzers reopen at once for everyone else.
+   - **No one got it:** shows the response; control doesn't change.
+   - **Put this clue back on the board:** if it was tapped by mistake.
+5. **Undo last ruling** reverses mistakes. **Edit** changes any score, and **Picks** sets who chooses next. **Go to Round 2** switches rounds; the lowest score picks first. **🏆 Final Jeopardy** opens pre-filled with the board's final question.
+
+Players never receive the board. Each phone gets only the clue being played, and the correct response only once that clue is over. Without a host remote, the game screen's own controls work too, but it can't show correct responses, because everyone can see that screen.
+
+Not yet: Daily Doubles (they play as normal clues for now) and using the game scores in Final Jeopardy. Both are coming next.
 
 ## Putting it online for free (GitHub Pages)
 
