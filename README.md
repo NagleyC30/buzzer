@@ -48,6 +48,7 @@ Open **✏️ Write question boards** from the home page. A board has **Round 1*
 
 - **In the editor:** type category names at the top of each column and click a square to write its clue. In the response box, **Enter** jumps to the next clue. **Row values** sets a row's value across all categories. **Place Daily Doubles at random** puts 1 in Round 1 and 2 in Round 2, in the lower rows and never two in one category.
 - **From a spreadsheet:** click **Download spreadsheet template** and open it in Google Sheets (*File → Import → Upload*) or Excel. Fill in one row per clue: `Round` (1, 2 or Final), `Category`, `Value`, `Clue`, `Response`, `Daily Double` (yes or blank). Blank Round or Category cells repeat the row above. Copy the rows, including the header, and use **Paste from spreadsheet…**. Problems are listed by row number. **Download as spreadsheet** turns any board back into a spreadsheet for editing.
+- **Sample board:** `samples/sample-board.csv` is a complete game (2 rounds, 60 clues, 3 Daily Doubles and a Final). Open it, copy everything, and use **Paste from spreadsheet…**, or open it in Google Sheets first to edit. The import window links to it as well.
 - **Saving:** boards save in your browser as you type, and you can keep several. **Save board file** downloads a board to back it up or share it, and **Open board file…** loads one.
 
 ### Playing a board
