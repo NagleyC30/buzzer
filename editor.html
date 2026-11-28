@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board Editor</title>
+<meta name="description" content="Write the categories, clues and responses for a quiz board.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='14' fill='%230b1d94'/><text x='50' y='66' font-size='46' text-anchor='middle' fill='%23ffd54a' font-family='sans-serif' font-weight='bold'>$</text></svg>">
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e3e1dc;
+    --accent: #e5484d; --ok: #2f9e66; --warn: #c98a12; --board: #0b1d94; --gold: #ffd54a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
+      --accent: #ff5a5f; --ok: #3fbf80; --warn: #e5a83b;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141416; --panel: #1e1e22; --text: #f2f2f4; --muted: #a0a0a8; --line: #2e2e34;
+    --accent: #ff5a5f; --ok: #3fbf80; --warn: #e5a83b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+  header.top { padding-top: 20px; }
+  h1 { font-size: 26px; margin: 0; }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  a { color: inherit; }
+  .muted { color: var(--muted); }
+  .err { color: var(--accent); font-weight: 600; }
+  .hidden { display: none !important; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1 1 200px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .stack > * + * { margin-top: 14px; }
+  label { font-weight: 600; }
+  label.block { display: block; margin-bottom: 6px; }
+  input, select, textarea {
+    font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); width: 100%;
+  }
+  textarea { resize: vertical; line-height: 1.4; }
+  input[type=checkbox] { width: auto; }
+  button {
+    font: inherit; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; cursor: pointer;
+    background: var(--panel); color: var(--text);
+  }
+  button.primary { background: var(--text); color: var(--bg); border-color: transparent; }
+  button.danger { color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .toolbar select { width: auto; max-width: 100%; }
+  .title-row { margin-top: 14px; }
+  .title-row input { font-size: 20px; font-weight: 700; }
+  #save-status { font-size: 14px; }
+  #save-status.bad { color: var(--accent); font-weight: 600; }
+
+  .tabs { display: flex; gap: 6px; margin: 20px 0 12px; flex-wrap: wrap; }
+  .tabs button { border-radius: 999px; }
+  .tabs button[aria-selected="true"] { background: var(--board); color: #fff; border-color: transparent; }
+  .tabs .count { font-weight: 500; opacity: .8; margin-left: 4px; font-size: 14px; }
+
+  .round-tools { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-bottom: 12px; }
+  .round-tools .vals { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .round-tools .vals input { width: 84px; padding: 6px 8px; }
+
+  .grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding-bottom: 40px; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  .col .cat {
+    background: var(--board); color: #fff; border: 0; text-align: center; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .03em; min-height: 64px; font-size: 14px; padding: 8px;
+  }
+  .col .cat::placeholder { color: rgba(255,255,255,.55); text-transform: none; font-weight: 600; }
+  .cell {
+    text-align: left; display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 8px 10px;
+    border: 1px dashed var(--line); background: var(--panel); font-weight: 500; position: relative;
+  }
+  .cell .v { font-weight: 800; color: var(--board); font-size: 15px; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cell .v { color: var(--gold); } }
+  :root[data-theme="dark"] .cell .v { color: var(--gold); }
+  .cell .q { font-size: 13px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .cell.done { border: 1px solid var(--ok); }
+  .cell.partial { border: 1px solid var(--warn); }
+  .cell .dd { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; background: var(--gold); color: #3b2a00; border-radius: 6px; padding: 1px 6px; }
+
+  #final-view { max-width: 720px; }
+  .final-board { background: var(--board); color: #fff; border-radius: 12px; padding: 14px; }
+  .final-board input, .final-board textarea { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.25); }
+  .final-board label { color: #fff; }
+
+  dialog { border: 1px solid var(--line); border-radius: 16px; padding: 0; background: var(--panel); color: var(--text); width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog form, dialog .body { padding: 18px; }
+  dialog .head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  dialog .head h3 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+  .dlg-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; margin-top: 16px; }
+  .dlg-actions .right { display: flex; gap: 8px; margin-left: auto; }
+  #import-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; white-space: pre; }
+  #import-report { font-size: 14px; }
+  #import-report ul { margin: 6px 0 0; padding-left: 20px; }
+  ol.steps { margin: 0; padding-left: 20px; }
+  ol.steps li + li { margin-top: 4px; }
+  code { font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+</style>
+</head>
+<body>
+
+<header class="wrap top">
+  <div class="row" style="justify-content:space-between">
+    <h1>Board editor</h1>
+    <a href="./" class="muted">← Back to the buzzer</a>
+  </div>
+  <div class="toolbar">
+    <label for="board-select" class="muted" style="font-weight:500">Board</label>
+    <select id="board-select"></select>
+    <button id="new-board">New board</button>
+    <button id="dup-board">Duplicate</button>
+    <button id="del-board" class="danger">Delete</button>
+  </div>
+  <div class="row title-row">
+    <input id="title" class="grow" maxlength="80" placeholder="Board title, e.g. Family Trivia Night">
+    <span id="save-status" class="muted">Saved in this browser</span>
+  </div>
+  <div class="toolbar">
+    <button id="import-btn" class="primary">Paste from spreadsheet…</button>
+    <button id="template-btn">Download spreadsheet template</button>
+    <button id="export-csv">Download as spreadsheet</button>
+    <button id="save-file">Save board file</button>
+    <button id="open-file">Open board file…</button>
+    <input type="file" id="open-input" accept=".json,application/json" class="hidden">
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="0">Round 1<span class="count" id="count-0"></span></button>
+    <button role="tab" data-tab="1">Round 2<span class="count" id="count-1"></span></button>
+    <button role="tab" data-tab="final">Final<span class="count" id="count-final"></span></button>
+  </nav>
+
+  <section id="round-view">
+    <div class="round-tools">
+      <div class="vals"><span class="muted">Row values</span><span id="row-values" class="vals"></span></div>
+      <div class="row"><span id="dd-count" class="muted"></span><button id="dd-random">Place Daily Doubles at random</button></div>
+    </div>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section id="final-view" class="hidden card stack">
+    <p class="muted" style="margin:0">The last question. Players see the category, place their bets, then see the clue.</p>
+    <div class="final-board stack">
+      <div><label class="block" for="f-category">Category</label><input id="f-category" maxlength="80"></div>
+      <div><label class="block" for="f-clue">Clue</label><textarea id="f-clue" rows="3" maxlength="400"></textarea></div>
+    </div>
+    <div><label class="block" for="f-response">Correct response <span class="muted" style="font-weight:500">(only the host sees this)</span></label><input id="f-response" maxlength="160"></div>
+  </section>
+</main>
+
+<!-- Edit one clue -->
+<dialog id="clue-dialog">
+  <form method="dialog" id="clue-form">
+    <div class="head"><h3 id="cd-title"></h3><span class="muted" id="cd-pos"></span></div>
+    <div class="stack" style="margin-top:14px">
+      <div class="row">
+        <div style="flex:0 0 140px"><label class="block" for="cd-value">Value</label><input id="cd-value" type="number" min="0" step="100" inputmode="numeric"></div>
+        <label class="row" style="margin-top:22px; font-weight:500"><input type="checkbox" id="cd-dd"> Daily Double</label>
+      </div>
+      <div><label class="block" for="cd-clue">Clue <span class="muted" style="font-weight:500">(shown to everyone)</span></label><textarea id="cd-clue" rows="3" maxlength="400" placeholder="e.g. This planet is known as the Red Planet"></textarea></div>
+      <div><label class="block" for="cd-response">Correct response <span class="muted" style="font-weight:500">(only the host sees this)</span></label><input id="cd-response" maxlength="160" placeholder="e.g. What is Mars?"></div>
+    </div>
+    <div class="dlg-actions">
+      <button type="button" id="cd-clear" class="danger">Clear</button>
+      <div class="right">
+        <button type="button" id="cd-prev">← Previous</button>
+        <button type="button" id="cd-next">Next →</button>
+        <button value="done" class="primary">Done</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- Import from a spreadsheet -->
+<dialog id="import-dialog">
+  <div class="body stack">
+    <div class="head"><h3>Paste from a spreadsheet</h3></div>
+    <ol class="steps">
+      <li>Download the spreadsheet template and open it in Google Sheets or Excel (in Google Sheets: <em>File → Import → Upload</em>).</li>
+      <li>Fill in one row per clue. Columns: <code>Round</code> (1, 2 or Final), <code>Category</code>, <code>Value</code>, <code>Clue</code>, <code>Response</code>, <code>Daily Double</code> (yes or blank). Blank Round or Category cells repeat the row above.</li>
+      <li>Select the rows, including the header, copy them, and paste below.</li>
+    </ol>
+    <textarea id="import-text" rows="9" placeholder="Paste here…" spellcheck="false"></textarea>
+    <div id="import-report"></div>
+    <div class="dlg-actions">
+      <button type="button" id="import-cancel">Cancel</button>
+      <div class="right"><button type="button" id="import-go" class="primary" disabled>Import</button></div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  const money = (n) => '$' + Number(n || 0).toLocaleString();
+
+  // ---------------------------------------------------------------- board model
+  // A board: two rounds of 6 categories x 5 clues, plus a final question.
+  const CATS = 6, ROWS = 5;
+  const DEFAULT_VALUES = [[200, 400, 600, 800, 1000], [400, 800, 1200, 1600, 2000]];
+  const DD_PER_ROUND = [1, 2];
+  const blankClue = (value) => ({ value, clue: '', response: '', dailyDouble: false });
+  function blankBoard(title) {
+    return {
+      format: 'gamebuzzer-board', version: 1, id: uid(), title: title || 'Untitled board', updated: Date.now(),
+      rounds: [0, 1].map((r) => ({ categories: Array.from({ length: CATS }, () => ({ name: '', clues: DEFAULT_VALUES[r].map(blankClue) })) })),
+      final: { category: '', clue: '', response: '' },
+    };
+  }
+  const str = (v, max) => String(v == null ? '' : v).slice(0, max);
+  // Make any loaded board (from storage or a file) the right shape.
+  function normalize(b) {
+    if (!b || typeof b !== 'object' || !Array.isArray(b.rounds)) throw new Error('This isn\'t a board file.');
+    const out = blankBoard(str(b.title, 80) || 'Untitled board');
+    if (typeof b.id === 'string') out.id = b.id.slice(0, 40);
+    out.updated = Number(b.updated) || Date.now();
+    for (let r = 0; r < 2; r++) {
+      const cats = (b.rounds[r] && Array.isArray(b.rounds[r].categories)) ? b.rounds[r].categories : [];
+      for (let c = 0; c < CATS; c++) {
+        const src = cats[c] || {}, dst = out.rounds[r].categories[c];
+        dst.name = str(src.name, 80);
+        const clues = Array.isArray(src.clues) ? src.clues : [];
+        for (let i = 0; i < ROWS; i++) {
+          const s = clues[i] || {};
+          dst.clues[i] = {
+            value: Number.isFinite(Number(s.value)) && s.value !== '' && s.value != null ? Math.max(0, Math.round(Number(s.value))) : DEFAULT_VALUES[r][i],
+            clue: str(s.clue, 400), response: str(s.response, 160), dailyDouble: !!s.dailyDouble,
+          };
+        }
+      }
+    }
+    const f = b.final || {};
+    out.final = { category: str(f.category, 80), clue: str(f.clue, 400), response: str(f.response, 160) };
+    return out;
+  }
+
+  // ---------------------------------------------------------------- storage (this browser)
+  const KEY = 'buzzer-boards-v1';
+  let db;
+  try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
+  if (!db || typeof db !== 'object' || !db.boards) db = { current: null, boards: {} };
+  for (const id of Object.keys(db.boards)) { try { db.boards[id] = normalize(db.boards[id]); } catch { delete db.boards[id]; } }
+  if (!db.boards[db.current]) {
+    const first = Object.values(db.boards).sort((a, b) => b.updated - a.updated)[0];
+    if (first) db.current = first.id;
+    else { const b = blankBoard('My first board'); db.boards[b.id] = b; db.current = b.id; }
+  }
+  const board = () => db.boards[db.current];
+  let saveTimer = null;
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); setStatus('Saved in this browser'); }
+    catch { setStatus('Couldn\'t save in this browser. Use "Save board file" to keep your work.', true); }
+  }
+  function touched() { board().updated = Date.now(); setStatus('Saving…'); clearTimeout(saveTimer); saveTimer = setTimeout(persist, 300); renderCounts(); }
+  function setStatus(text, bad) { $('save-status').textContent = text; $('save-status').classList.toggle('bad', !!bad); }
+  window.addEventListener('beforeunload', () => { if (saveTimer) { clearTimeout(saveTimer); persist(); } });
+
+  // ---------------------------------------------------------------- rendering
+  let tab = 0; // 0, 1 or 'final'
+  const clueState = (q) => (q.clue.trim() && q.response.trim() ? 'done' : q.clue.trim() || q.response.trim() ? 'partial' : 'empty');
+  function renderBoards() {
+    const sel = $('board-select'); sel.innerHTML = '';
+    for (const b of Object.values(db.boards).sort((a, b) => a.title.localeCompare(b.title))) sel.add(new Option(b.title || 'Untitled board', b.id, false, b.id === db.current));
+    if ($('title').value !== board().title) $('title').value = board().title;
+  }
+  function renderCounts() {
+    const b = board();
+    for (const r of [0, 1]) {
+      const all = b.rounds[r].categories.flatMap((c) => c.clues);
+      $('count-' + r).textContent = `· ${all.filter((q) => clueState(q) === 'done').length}/${CATS * ROWS}`;
+    }
+    const f = b.final;
+    $('count-final').textContent = f.category.trim() && f.clue.trim() && f.response.trim() ? '· ✓' : '';
+    if (tab !== 'final') {
+      const dd = b.rounds[tab].categories.flatMap((c) => c.clues).filter((q) => q.dailyDouble).length;
+      $('dd-count').textContent = `Daily Doubles: ${dd}` + (dd !== DD_PER_ROUND[tab] ? ` (usually ${DD_PER_ROUND[tab]} in this round)` : '');
+    }
+  }
+  function renderTabs() {
+    for (const t of document.querySelectorAll('.tabs button')) t.setAttribute('aria-selected', String(t.dataset.tab === String(tab)));
+    $('round-view').classList.toggle('hidden', tab === 'final');
+    $('final-view').classList.toggle('hidden', tab !== 'final');
+  }
+  function renderCell(btn, q) {
+    btn.className = 'cell ' + clueState(q);
+    btn.innerHTML = '<span class="v"></span><span class="q"></span>';
+    btn.querySelector('.v').textContent = money(q.value);
+    btn.querySelector('.q').textContent = q.clue.trim() || (q.response.trim() ? '(no clue yet)' : 'Empty: tap to write');
+    if (q.dailyDouble) { const s = document.createElement('span'); s.className = 'dd'; s.textContent = 'DD'; btn.appendChild(s); }
+  }
+  function renderRound() {
+    const b = board();
+    if (tab === 'final') {
+      $('f-category').value = b.final.category; $('f-clue').value = b.final.clue; $('f-response').value = b.final.response;
+      renderCounts(); return;
+    }
+    const round = b.rounds[tab];
+    // Row values: the value of each row, set across all categories at once.
+    const rv = $('row-values'); rv.innerHTML = '';
+    for (let i = 0; i < ROWS; i++) {
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '0'; inp.step = '100'; inp.inputMode = 'numeric';
+      inp.setAttribute('aria-label', `Row ${i + 1} value`);
+      const vals = new Set(round.categories.map((c) => c.clues[i].value));
+      inp.value = vals.size === 1 ? [...vals][0] : '';
+      inp.placeholder = vals.size === 1 ? '' : 'mixed';
+      inp.onchange = () => {
+        const v = Math.max(0, Math.round(Number(inp.value)));
+        if (inp.value === '' || !Number.isFinite(v)) return;
+        for (const c of round.categories) c.clues[i].value = v;
+        touched(); renderRound();
+      };
+      rv.appendChild(inp);
+    }
+    const grid = $('grid'); grid.innerHTML = '';
+    round.categories.forEach((cat, c) => {
+      const col = document.createElement('div'); col.className = 'col';
+      const name = document.createElement('input');
+      name.className = 'cat'; name.maxLength = 80; name.placeholder = `Category ${c + 1}`; name.value = cat.name;
+      name.setAttribute('aria-label', `Category ${c + 1} name`);
+      name.oninput = () => { cat.name = name.value; touched(); };
+      col.appendChild(name);
+      cat.clues.forEach((q, i) => {
+        const btn = document.createElement('button'); btn.type = 'button';
+        btn.dataset.c = c; btn.dataset.i = i;
+        renderCell(btn, q);
+        btn.onclick = () => openClue(c, i);
+        col.appendChild(btn);
+      });
+      grid.appendChild(col);
+    });
+    renderCounts();
+  }
+  const renderAll = () => { renderBoards(); renderTabs(); renderRound(); };
+
+  // ---------------------------------------------------------------- clue dialog
+  let cur = null; // { c, i }
+  function openClue(c, i) {
+    cur = { c, i }; fillClue();
+    if (!$('clue-dialog').open) $('clue-dialog').showModal();
+    $('cd-clue').focus();
+  }
+  function fillClue() {
+    const cat = board().rounds[tab].categories[cur.c], q = cat.clues[cur.i];
+    $('cd-title').textContent = `${cat.name.trim() || `Category ${cur.c + 1}`} · ${money(q.value)}`;
+    $('cd-pos').textContent = `Round ${tab + 1}`;
+    $('cd-value').value = q.value; $('cd-dd').checked = q.dailyDouble;
+    $('cd-clue').value = q.clue; $('cd-response').value = q.response;
+    $('cd-prev').disabled = cur.c === 0 && cur.i === 0;
+    $('cd-next').disabled = cur.c === CATS - 1 && cur.i === ROWS - 1;
+  }
+  const curClue = () => board().rounds[tab].categories[cur.c].clues[cur.i];
+  function refreshCell() {
+    const btn = document.querySelector(`.cell[data-c="${cur.c}"][data-i="${cur.i}"]`);
+    if (btn) renderCell(btn, curClue());
+    touched();
+  }
+  $('cd-clue').oninput = () => { curClue().clue = $('cd-clue').value; refreshCell(); };
+  $('cd-response').oninput = () => { curClue().response = $('cd-response').value; refreshCell(); };
+  $('cd-dd').onchange = () => { curClue().dailyDouble = $('cd-dd').checked; refreshCell(); };
+  $('cd-value').oninput = () => {
+    const v = Math.round(Number($('cd-value').value));
+    if ($('cd-value').value === '' || !Number.isFinite(v) || v < 0) return;
+    curClue().value = v; refreshCell(); fillTitleOnly();
+  };
+  function fillTitleOnly() { const cat = board().rounds[tab].categories[cur.c]; $('cd-title').textContent = `${cat.name.trim() || `Category ${cur.c + 1}`} · ${money(curClue().value)}`; }
+  // Previous / next walk down each category, then on to the next one.
+  function step(d) {
+    let n = cur.c * ROWS + cur.i + d;
+    n = Math.max(0, Math.min(CATS * ROWS - 1, n));
+    cur = { c: Math.floor(n / ROWS), i: n % ROWS }; fillClue(); $('cd-clue').focus();
+  }
+  $('cd-prev').onclick = () => step(-1);
+  $('cd-next').onclick = () => step(1);
+  $('cd-clear').onclick = () => { Object.assign(curClue(), { clue: '', response: '', dailyDouble: false }); fillClue(); refreshCell(); };
+  $('clue-form').addEventListener('keydown', (e) => {
+    // Enter in the response box moves on to the next clue: quick for typing a whole category.
+    if (e.key === 'Enter' && e.target.id === 'cd-response') { e.preventDefault(); if (!$('cd-next').disabled) step(1); else $('clue-dialog').close(); }
+  });
+
+  // ---------------------------------------------------------------- final
+  for (const [id, key] of [['f-category', 'category'], ['f-clue', 'clue'], ['f-response', 'response']]) $(id).oninput = () => { board().final[key] = $(id).value; touched(); };
+
+  // ---------------------------------------------------------------- Daily Doubles
+  $('dd-random').onclick = () => {
+    const round = board().rounds[tab];
+    const existing = round.categories.flatMap((c) => c.clues).filter((q) => q.dailyDouble).length;
+    if (existing && !confirm('Replace the Daily Doubles already placed in this round?')) return;
+    for (const c of round.categories) for (const q of c.clues) q.dailyDouble = false;
+    // Like the show: usually in the lower (higher-value) rows, never two in one category.
+    const cats = [...Array(CATS).keys()].sort(() => Math.random() - 0.5).slice(0, DD_PER_ROUND[tab]);
+    for (const c of cats) round.categories[c].clues[2 + Math.floor(Math.random() * 3)].dailyDouble = true;
+    touched(); renderRound();
+  };
+
+  // ---------------------------------------------------------------- boards
+  $('board-select').onchange = () => { db.current = $('board-select').value; persist(); renderAll(); };
+  let titleTimer = null;
+  $('title').oninput = () => { board().title = $('title').value; touched(); clearTimeout(titleTimer); titleTimer = setTimeout(renderBoards, 600); };
+  $('new-board').onclick = () => { const b = blankBoard('Untitled board'); db.boards[b.id] = b; db.current = b.id; tab = 0; persist(); renderAll(); $('title').select(); };
+  $('dup-board').onclick = () => { const b = normalize(JSON.parse(JSON.stringify(board()))); b.id = uid(); b.title = board().title + ' (copy)'; db.boards[b.id] = b; db.current = b.id; persist(); renderAll(); };
+  $('del-board').onclick = () => {
+    if (!confirm(`Delete "${board().title}"? This can't be undone (unless you've saved a board file).`)) return;
+    delete db.boards[db.current];
+    const next = Object.values(db.boards)[0] || blankBoard('Untitled board');
+    db.boards[next.id] = next; db.current = next.id; tab = 0; persist(); renderAll();
+  };
+  for (const t of document.querySelectorAll('.tabs button')) t.onclick = () => { tab = t.dataset.tab === 'final' ? 'final' : Number(t.dataset.tab); renderTabs(); renderRound(); };
+
+  // ---------------------------------------------------------------- files
+  const safeName = (s) => (s || 'board').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'board';
+  function download(name, text, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  $('save-file').onclick = () => download(safeName(board().title) + '.board.json', JSON.stringify(board(), null, 2), 'application/json');
+  $('open-file').onclick = () => $('open-input').click();
+  $('open-input').onchange = async () => {
+    const f = $('open-input').files[0]; $('open-input').value = '';
+    if (!f) return;
+    try {
+      const b = normalize(JSON.parse(await f.text()));
+      if (db.boards[b.id]) b.id = uid(); // keep both if it's already here
+      db.boards[b.id] = b; db.current = b.id; tab = 0; persist(); renderAll();
+      setStatus(`Opened "${b.title}"`);
+    } catch (e) { alert('Couldn\'t open that file. ' + (e.message || 'It isn\'t a board file.')); }
+  };
+
+  // ---------------------------------------------------------------- spreadsheets (CSV / pasted rows)
+  const HEAD = ['Round', 'Category', 'Value', 'Clue', 'Response', 'Daily Double'];
+  const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  function boardToRows(b, placeholders) {
+    const rows = [HEAD];
+    b.rounds.forEach((round, r) => round.categories.forEach((cat, c) => cat.clues.forEach((q) => {
+      rows.push([r + 1, cat.name || (placeholders ? `Category ${c + 1}` : ''), q.value, q.clue, q.response, q.dailyDouble ? 'yes' : '']);
+    })));
+    rows.push(['Final', b.final.category || (placeholders ? 'Final category' : ''), '', b.final.clue, b.final.response, '']);
+    return rows;
+  }
+  const toCsv = (rows) => '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n'); // BOM so Excel reads accents correctly
+  $('export-csv').onclick = () => download(safeName(board().title) + '.csv', toCsv(boardToRows(board(), false)), 'text/csv');
+  $('template-btn').onclick = () => download('board-template.csv', toCsv(boardToRows(blankBoard(''), true)), 'text/csv');
+
+  // Parse pasted spreadsheet rows: tab-separated (copied from Sheets/Excel) or CSV.
+  function parseTable(text) {
+    text = text.replace(/^﻿/, '');
+    const firstLine = text.split(/\r?\n/)[0] || '';
+    const delim = firstLine.includes('\t') ? '\t' : ',';
+    const rows = []; let row = [], field = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += ch;
+      } else if (ch === '"' && field === '') inQ = true;
+      else if (ch === delim) { row.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(field); rows.push(row); row = []; field = ''; }
+      else field += ch;
+    }
+    row.push(field); rows.push(row);
+    return rows.map((r) => r.map((x) => x.trim())).filter((r) => r.some(Boolean));
+  }
+  function roundOf(s) {
+    const t = s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    if (/^(f|fj|final|final ?jeopardy|final round|3|round ?3)$/.test(t)) return 'final';
+    if (/^(2|r2|round ?2|dj|double|double ?jeopardy)$/.test(t)) return 1;
+    if (/^(1|r1|round ?1|j|single|jeopardy)$/.test(t)) return 0;
+    return null;
+  }
+  const yes = (s) => /^(y|yes|x|true|1|dd|daily double)$/i.test(s.trim());
+  function parseImport(text) {
+    const rows = parseTable(text), problems = [];
+    if (!rows.length) return { problems: ['Nothing to import yet.'], empty: true };
+    // Work out which column is which from the header row, if there is one.
+    let col = { round: 0, category: 1, value: 2, clue: 3, response: 4, dd: 5 }, start = 0;
+    const head = rows[0].map((h) => h.toLowerCase());
+    if (head.some((h) => /categ|clue|question|response|answer/.test(h))) {
+      const find = (re) => head.findIndex((h) => re.test(h));
+      col = { round: find(/round/), category: find(/categ/), value: find(/value|amount|points|\$/), clue: find(/clue|question/), response: find(/response|answer/), dd: find(/daily|^dd$/) };
+      for (const k of ['round', 'category', 'clue', 'response']) if (col[k] < 0) problems.push(`Couldn't find a "${k[0].toUpperCase() + k.slice(1)}" column in the header row.`);
+      if (problems.length) return { problems };
+      start = 1;
+    }
+    const get = (r, k) => (col[k] >= 0 ? (r[col[k]] || '') : '');
+    const found = [new Map(), new Map()]; let final = null, lastRound = null, lastCat = '';
+    for (let n = start; n < rows.length; n++) {
+      const r = rows[n], line = n + 1;
+      const roundText = get(r, 'round');
+      const round = roundText ? roundOf(roundText) : lastRound;
+      if (roundText && round === null) { problems.push(`Row ${line}: "${roundText}" isn't a round. Use 1, 2 or Final.`); continue; }
+      if (round === null) { problems.push(`Row ${line}: no round given.`); continue; }
+      if (round !== lastRound) lastCat = '';
+      lastRound = round;
+      const hasContent = !!(get(r, 'clue') || get(r, 'response'));
+      // A blank Category repeats the one above, but only for rows that have a clue in them;
+      // completely empty rows (like the blank slots in a downloaded board) are skipped.
+      if (!get(r, 'category') && !hasContent && round !== 'final') continue;
+      const category = get(r, 'category') || lastCat; lastCat = category;
+      if (round === 'final') {
+        if (final) problems.push(`Row ${line}: more than one Final row; using the first.`);
+        else final = { category: str(category, 80), clue: str(get(r, 'clue'), 400), response: str(get(r, 'response'), 160) };
+        continue;
+      }
+      if (!category) { problems.push(`Row ${line}: no category given.`); continue; }
+      const vText = get(r, 'value').replace(/[$,\s]/g, '');
+      const value = vText === '' ? null : Math.round(Number(vText));
+      if (vText !== '' && !Number.isFinite(value)) { problems.push(`Row ${line}: "${get(r, 'value')}" isn't a number.`); continue; }
+      const cats = found[round];
+      if (!cats.has(category)) cats.set(category, []);
+      cats.get(category).push({ value, clue: str(get(r, 'clue'), 400), response: str(get(r, 'response'), 160), dailyDouble: yes(get(r, 'dd')) });
+    }
+    for (const r of [0, 1]) {
+      if (found[r].size > CATS) problems.push(`Round ${r + 1} has ${found[r].size} categories; a board holds ${CATS}.`);
+      for (const [name, clues] of found[r]) if (clues.length > ROWS) problems.push(`Round ${r + 1}, "${name}" has ${clues.length} clues; a category holds ${ROWS}.`);
+    }
+    return { found, final, problems };
+  }
+  function applyImport(res) {
+    const b = board();
+    for (const r of [0, 1]) {
+      if (!res.found[r].size) continue; // rounds not in the paste are left alone
+      const cats = [...res.found[r]];
+      // The value of each row: what full categories in the paste use, else the usual values.
+      const rowVals = DEFAULT_VALUES[r].map((def, i) => {
+        const seen = cats.map(([, cl]) => cl).filter((cl) => cl.length === ROWS && cl.every((q) => q.value !== null))
+          .map((cl) => [...cl].sort((x, y) => x.value - y.value)[i].value);
+        if (!seen.length) return def;
+        const counts = new Map(); for (const v of seen) counts.set(v, (counts.get(v) || 0) + 1);
+        return [...counts].sort((a, b) => b[1] - a[1])[0][0];
+      });
+      b.rounds[r].categories = Array.from({ length: CATS }, (_, c) => {
+        const [name, clues] = cats[c] || ['', []];
+        const slots = Array(ROWS).fill(null);
+        const sorted = clues.every((q) => q.value !== null) ? [...clues].sort((x, y) => x.value - y.value) : clues;
+        // Put each clue in the row with its value; any others fill the free rows in order.
+        const rest = [];
+        for (const q of sorted) {
+          const i = q.value === null ? -1 : rowVals.findIndex((v, k) => v === q.value && !slots[k]);
+          if (i >= 0 && sorted.length < ROWS) slots[i] = q; else rest.push(q);
+        }
+        for (const q of rest) slots[slots.indexOf(null)] = q;
+        return { name: str(name, 80), clues: slots.map((q, i) => (q ? { ...q, value: q.value === null ? rowVals[i] : Math.max(0, q.value) } : blankClue(rowVals[i]))) };
+      });
+    }
+    if (res.final) b.final = res.final;
+    touched(); renderAll();
+  }
+  let lastParse = null;
+  function reportImport() {
+    const text = $('import-text').value;
+    const res = lastParse = text.trim() ? parseImport(text) : null;
+    const rep = $('import-report'); rep.innerHTML = '';
+    $('import-go').disabled = true;
+    if (!res) return;
+    const lines = [];
+    for (const r of [0, 1]) {
+      if (!res.found || !res.found[r].size) continue;
+      const clues = [...res.found[r].values()].flat();
+      lines.push(`Round ${r + 1}: ${res.found[r].size} categor${res.found[r].size === 1 ? 'y' : 'ies'}, ${clues.length} clue${clues.length === 1 ? '' : 's'}` +
+        `, ${clues.filter((q) => q.dailyDouble).length} Daily Double${clues.filter((q) => q.dailyDouble).length === 1 ? '' : 's'}`);
+    }
+    if (res.final) lines.push('Final: ' + (res.final.category || '(no category)'));
+    if (lines.length) { const p = document.createElement('div'); p.innerHTML = '<strong>Found:</strong> '; p.append(lines.join(' · ')); rep.appendChild(p); }
+    if (res.problems.length) {
+      const p = document.createElement('div'); p.className = 'err'; p.textContent = 'Fix these in the spreadsheet, then copy and paste again:';
+      const ul = document.createElement('ul'); for (const m of res.problems.slice(0, 12)) { const li = document.createElement('li'); li.textContent = m; ul.appendChild(li); }
+      if (res.problems.length > 12) { const li = document.createElement('li'); li.textContent = `…and ${res.problems.length - 12} more`; ul.appendChild(li); }
+      p.appendChild(ul); rep.appendChild(p);
+    } else if (lines.length) {
+      const replaced = [res.found[0].size && 'Round 1', res.found[1].size && 'Round 2', res.final && 'Final'].filter(Boolean);
+      const p = document.createElement('div'); p.className = 'muted'; p.textContent = `Importing replaces ${replaced.join(', ')} on "${board().title}".`;
+      rep.appendChild(p); $('import-go').disabled = false;
+    }
+  }
+  $('import-btn').onclick = () => { $('import-text').value = ''; reportImport(); $('import-dialog').showModal(); $('import-text').focus(); };
+  $('import-text').oninput = reportImport;
+  $('import-cancel').onclick = () => $('import-dialog').close();
+  $('import-go').onclick = () => { if (lastParse && !lastParse.problems.length) { applyImport(lastParse); $('import-dialog').close(); setStatus('Imported. Saved in this browser'); } };
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

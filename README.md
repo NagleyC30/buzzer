@@ -30,6 +30,16 @@ The clue isn't sent to phones until you reveal it. Bets and answers stay on the 
 
 If the host refreshes the page, the room keeps the same code and players reconnect on their own.
 
+## Writing question boards (`editor.html`)
+
+Open **✏️ Write question boards** from the home page. A board has **Round 1** and **Round 2** (6 categories × 5 clues each) and a **Final** question. Each clue has a value, the clue (shown to everyone), the correct response (shown only to the host) and an optional **Daily Double**.
+
+- **In the editor:** type category names at the top of each column and click a square to write its clue. In the response box, **Enter** jumps to the next clue. **Row values** sets a row's value across all categories. **Place Daily Doubles at random** puts 1 in Round 1 and 2 in Round 2, in the lower rows and never two in one category.
+- **From a spreadsheet:** click **Download spreadsheet template** and open it in Google Sheets (*File → Import → Upload*) or Excel. Fill in one row per clue: `Round` (1, 2 or Final), `Category`, `Value`, `Clue`, `Response`, `Daily Double` (yes or blank). Blank Round or Category cells repeat the row above. Copy the rows, including the header, and use **Paste from spreadsheet…**. Problems are listed by row number. **Download as spreadsheet** turns any board back into a spreadsheet for editing.
+- **Saving:** boards save in your browser as you type, and you can keep several. **Save board file** downloads a board to back it up or share it, and **Open board file…** loads one.
+
+Boards aren't playable yet. That's the next step: a game-screen view for the TV and a host remote for the phone.
+
 ## Putting it online for free (GitHub Pages)
 
 The whole app is one file, `index.html`, so any static host works. With GitHub Pages:
